@@ -2,9 +2,9 @@ import anthropic
 import json
 import os
 
-def summarize_and_tag(text: str) -> dict:
+async def summarize_and_tag(text: str) -> dict:
     """Takes input text, summarizes it into 3-5 sentences, and generates tags."""
-    client = anthropic.Anthropic(
+    client = anthropic.AsyncAnthropic(
         api_key=os.environ.get("ANTHROPIC_API_KEY", "my_api_key"),
     )
     
@@ -20,7 +20,7 @@ Content:
 """
     
     try:
-        message = client.messages.create(
+        message = await client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=2000,
             temperature=0.2,

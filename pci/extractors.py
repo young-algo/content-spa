@@ -6,6 +6,7 @@ import tempfile
 import urllib.request
 from urllib.error import URLError
 from urllib.parse import urlparse
+import asyncio
 import trafilatura
 import webvtt
 from pypdf import PdfReader
@@ -22,7 +23,7 @@ def is_youtube_url(url: str) -> bool:
     parsed = urlparse(url)
     return "youtube.com" in parsed.netloc or "youtu.be" in parsed.netloc
 
-def extract_youtube(url: str) -> dict:
+async def extract_youtube(url: str) -> dict:
     video_id = None
     match = re.search(r'(?:v=|\/)([0-9A-Za-z_-]{11}).*', url)
     if match:
@@ -49,7 +50,7 @@ def extract_youtube(url: str) -> dict:
                 url
             ]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            result = await asyncio.to_thread(subprocess.run, cmd, capture_output=True, text=True, timeout=120)
 
             if result.returncode != 0:
                 if "HTTP Error 429: Too Many Requests" in result.stderr:
@@ -101,12 +102,16 @@ def extract_youtube(url: str) -> dict:
 
     return {"title": title, "content": transcript_text, "source_type": "youtube"}
 
-def extract_article(url: str) -> dict:
+async def extract_article(url: str) -> dict:
     try:
         # Enforce a strict 30 second timeout on URL opening
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'})
-        with urllib.request.urlopen(req, timeout=30) as response:
-            html = response.read().decode('utf-8')
+        
+        def fetch():
+            with urllib.request.urlopen(req, timeout=30) as response:
+                return response.read().decode('utf-8')
+                
+        html = await asyncio.to_thread(fetch)
     except Exception as e:
         raise ExtractionError(f"Failed to download article at {url}: {e}")
 
@@ -128,19 +133,22 @@ def extract_article(url: str) -> dict:
 
     return {"title": title, "content": result, "source_type": "article"}
 
-def extract_pdf(file_path: str) -> dict:
+async def extract_pdf(file_path: str) -> dict:
     if not os.path.exists(file_path):
         raise ExtractionError(f"PDF file not found: {file_path}")
         
     try:
         reader = PdfReader(file_path)
-        text_content = []
-        for page in reader.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text_content.append(page_text)
-                
-        content = "\n".join(text_content)
+        
+        def read_pdf():
+            text_content = []
+            for page in reader.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text_content.append(page_text)
+            return "\n".join(text_content)
+            
+        content = await asyncio.to_thread(read_pdf)
         
         if not content.strip():
             raise ExtractionError(f"Could not extract any text from PDF: {file_path}")

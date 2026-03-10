@@ -6,8 +6,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import asyncio
 from pci.db import init_db, search_similar, search_keyword, get_all_documents
-from pci.ingest import ingest_url, ingest_pdf
+from pci.ingest import async_ingest_url, async_ingest_pdf
 from pci.embeddings import get_embedding
 
 app = typer.Typer(help="Personal Content Index")
@@ -26,7 +27,7 @@ def add(url: str):
         console.print("[yellow]Database not found. Initializing...[/yellow]")
         init_db()
     
-    ingest_url(url)
+    asyncio.run(async_ingest_url(url))
 
 @app.command()
 def search(query: str, semantic: bool = typer.Option(True, help="Use semantic vector search")):
@@ -89,15 +90,23 @@ def import_bookmarks(path: str):
     if not os.path.exists(os.environ.get("PCI_DB_PATH", "pci.db")):
         init_db()
         
-    import time
-    for i, url in enumerate(urls, 1):
-        console.print(f"\n[bold blue]({i}/{len(urls)})[/bold blue]")
-        try:
-            ingest_url(url)
-        except Exception as e:
-            console.print(f"[red]Failed to ingest {url}: {e}[/red]")
-        if i < len(urls):
-            time.sleep(3)
+    async def process_all():
+        semaphore = asyncio.Semaphore(5) # Limit to 5 concurrent tasks to prevent HTTP 429
+        
+        async def bounded_ingest(u, index):
+            async with semaphore:
+                console.print(f"\n[bold blue]Starting ({index}/{len(urls)})[/bold blue]")
+                try:
+                    await async_ingest_url(u)
+                except Exception as e:
+                    console.print(f"[red]Failed to ingest {u}: {e}[/red]")
+                    
+        tasks = [bounded_ingest(u, i) for i, u in enumerate(urls, 1)]
+        await asyncio.gather(*tasks)
+        
+    start_time = time.time()
+    asyncio.run(process_all())
+    console.print(f"[bold green]Import complete in {time.time() - start_time:.2f} seconds![/bold green]")
 
 @app.command()
 def import_playlist(
@@ -128,19 +137,28 @@ def import_playlist(
             if not os.path.exists(os.environ.get("PCI_DB_PATH", "pci.db")):
                 init_db()
                 
-            for i, entry in enumerate(entries, 1):
-                video_url = entry.get('url') or entry.get('webpage_url')
-                if not video_url and entry.get('id'):
-                    video_url = f"https://www.youtube.com/watch?v={entry['id']}"
-                    
-                if video_url:
-                    console.print(f"\n[bold blue]({i}/{len(entries)})[/bold blue]")
-                    try:
-                        ingest_url(video_url)
-                    except Exception as e:
-                        console.print(f"[red]Failed to ingest {video_url}: {e}[/red]")
-                    if i < len(entries):
-                        time.sleep(3)
+            async def process_all():
+                semaphore = asyncio.Semaphore(3) # YouTube is strict, limit to 3 concurrent
+                
+                async def bounded_ingest(entry, index):
+                    video_url = entry.get('url') or entry.get('webpage_url')
+                    if not video_url and entry.get('id'):
+                        video_url = f"https://www.youtube.com/watch?v={entry['id']}"
+                        
+                    if video_url:
+                        async with semaphore:
+                            console.print(f"\n[bold blue]Starting ({index}/{len(entries)})[/bold blue]")
+                            try:
+                                await async_ingest_url(video_url)
+                            except Exception as e:
+                                console.print(f"[red]Failed to ingest {video_url}: {e}[/red]")
+                                
+                tasks = [bounded_ingest(entry, i) for i, entry in enumerate(entries, 1)]
+                await asyncio.gather(*tasks)
+                
+            start_time = time.time()
+            asyncio.run(process_all())
+            console.print(f"[bold green]Playlist import complete in {time.time() - start_time:.2f} seconds![/bold green]")
         else:
             console.print("[yellow]No playlist entries found. Are you sure this is a playlist URL?[/yellow]")
 
@@ -158,7 +176,7 @@ def import_pdf(path: str):
         console.print("[yellow]Database not found. Initializing...[/yellow]")
         init_db()
         
-    ingest_pdf(path)
+    asyncio.run(async_ingest_pdf(path))
 
 @app.command()
 def import_pdf_folder(path: str):
@@ -181,16 +199,23 @@ def import_pdf_folder(path: str):
         init_db()
         
     import time
-    for i, file_path in enumerate(pdf_files, 1):
-        console.print(f"\n[bold blue]({i}/{len(pdf_files)})[/bold blue]")
-        try:
-            ingest_pdf(file_path)
-        except Exception as e:
-            console.print(f"[red]Failed to ingest {file_path}: {e}[/red]")
-            
-        # Optional sleep to avoid overly thrashing the system/API, similar to import_bookmarks
-        if i < len(pdf_files):
-            time.sleep(1)
+    async def process_all():
+        semaphore = asyncio.Semaphore(5) # Local parsing, we can be slightly faster
+        
+        async def bounded_ingest(f_path, index):
+            async with semaphore:
+                console.print(f"\n[bold blue]Starting ({index}/{len(pdf_files)})[/bold blue]")
+                try:
+                    await async_ingest_pdf(f_path)
+                except Exception as e:
+                    console.print(f"[red]Failed to ingest {f_path}: {e}[/red]")
+                    
+        tasks = [bounded_ingest(f, i) for i, f in enumerate(pdf_files, 1)]
+        await asyncio.gather(*tasks)
+        
+    start_time = time.time()
+    asyncio.run(process_all())
+    console.print(f"[bold green]Folder import complete in {time.time() - start_time:.2f} seconds![/bold green]")
 
 @app.command()
 def export_csv(path: str = typer.Argument("index_export.csv", help="Path to save the CSV file")):

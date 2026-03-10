@@ -18,6 +18,8 @@ dependencies = [
     "webvtt-py",
     "sqlean.py",
     "python-dotenv>=1.2.2",
+    "aiohttp",
+    "tqdm",
 ]
 
 [project.scripts]

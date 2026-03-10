@@ -1,3 +1,4 @@
+import asyncio
 from pci.extractors import is_youtube_url, extract_youtube, extract_article, extract_pdf, ExtractionError, RateLimitError
 from pci.llm import summarize_and_tag
 from pci.embeddings import get_embedding
@@ -6,14 +7,14 @@ from rich.console import Console
 
 console = Console()
 
-def ingest_url(url: str):
+async def async_ingest_url(url: str):
     console.print(f"[bold blue]Processing:[/bold blue] {url}")
     
     try:
         if is_youtube_url(url):
-            data = extract_youtube(url)
+            data = await extract_youtube(url)
         else:
-            data = extract_article(url)
+            data = await extract_article(url)
     except RateLimitError as e:
         console.print(f"[red]Rate Limit Error:[/red] {e}")
         console.print("[yellow]Skipping ingestion to prevent empty database entries.[/yellow]")
@@ -30,17 +31,18 @@ def ingest_url(url: str):
     console.print(f"[green]Extracted title:[/green] {data['title']} ({data['source_type']})")
     
     console.print("[cyan]Generating summary and tags via Claude Haiku...[/cyan]")
-    llm_result = summarize_and_tag(data['content'][:50000])
+    llm_result = await summarize_and_tag(data['content'][:50000])
     summary = llm_result.get("summary", "No summary generated.")
     tags = llm_result.get("tags", [])
     console.print(f"[dim]Summary: {summary}[/dim]")
     console.print(f"[dim]Tags: {', '.join(tags)}[/dim]")
     
     console.print("[cyan]Generating embeddings...[/cyan]")
-    embedding = get_embedding(summary)
+    embedding = await get_embedding(summary)
     
     console.print("[cyan]Storing locally...[/cyan]")
-    doc_id = insert_document(
+    doc_id = await asyncio.to_thread(
+        insert_document,
         url=url,
         title=data['title'],
         source_type=data['source_type'],
@@ -51,11 +53,11 @@ def ingest_url(url: str):
     
     console.print(f"[bold green]Successfully ingested '{data['title']}' (ID: {doc_id})[/bold green]")
 
-def ingest_pdf(file_path: str):
+async def async_ingest_pdf(file_path: str):
     console.print(f"[bold blue]Processing PDF:[/bold blue] {file_path}")
     
     try:
-        data = extract_pdf(file_path)
+        data = await extract_pdf(file_path)
     except ExtractionError as e:
         console.print(f"[red]Extraction Error:[/red] {e}")
         console.print("[yellow]Skipping ingestion to prevent garbage database entries.[/yellow]")
@@ -69,18 +71,19 @@ def ingest_pdf(file_path: str):
     
     console.print("[cyan]Generating summary and tags via Claude Haiku...[/cyan]")
     # PDF's could be very long, so truncate just like URLs
-    llm_result = summarize_and_tag(data['content'][:50000])
+    llm_result = await summarize_and_tag(data['content'][:50000])
     summary = llm_result.get("summary", "No summary generated.")
     tags = llm_result.get("tags", [])
     console.print(f"[dim]Summary: {summary}[/dim]")
     console.print(f"[dim]Tags: {', '.join(tags)}[/dim]")
     
     console.print("[cyan]Generating embeddings...[/cyan]")
-    embedding = get_embedding(summary)
+    embedding = await get_embedding(summary)
     
     console.print("[cyan]Storing locally...[/cyan]")
     # Use file_path as the URL for local files
-    doc_id = insert_document(
+    doc_id = await asyncio.to_thread(
+        insert_document,
         url=f"file://{file_path}",
         title=data['title'],
         source_type=data['source_type'],
