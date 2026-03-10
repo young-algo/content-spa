@@ -21,13 +21,17 @@ def init():
     console.print(f"[green]Initialized database at {os.environ.get('PCI_DB_PATH', 'pci.db')}[/green]")
 
 @app.command()
-def add(url: str):
-    """Add a new URL (Article or YouTube video) to the index."""
+def add(source: str):
+    """Add a new URL (Article or YouTube video) or a local PDF file to the index."""
     if not os.path.exists(os.environ.get("PCI_DB_PATH", "pci.db")):
         console.print("[yellow]Database not found. Initializing...[/yellow]")
         init_db()
     
-    asyncio.run(async_ingest_url(url))
+    # If the source is an existing local file, treat it as a PDF
+    if os.path.exists(source) and os.path.isfile(source):
+        asyncio.run(async_ingest_pdf(source))
+    else:
+        asyncio.run(async_ingest_url(source))
 
 @app.command()
 def search(query: str, semantic: bool = typer.Option(True, help="Use semantic vector search")):

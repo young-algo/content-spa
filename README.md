@@ -44,9 +44,9 @@ The tool is accessible via the `pci` command once installed, or by running the m
   ```
 
 * **Add a Single Item:**
-  Ingests a URL (article or YouTube video), extracts the text/transcript, generates a summary, creates an embedding, and saves it.
+  Ingests a URL (article or YouTube video) or a local PDF file, extracts the text/transcript, generates a summary, creates an embedding, and saves it.
   ```bash
-  pci add <url>
+  pci add <url_or_path>
   ```
 
 * **Search:**
