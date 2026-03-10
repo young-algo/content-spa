@@ -1,5 +1,5 @@
-import asyncio
-from pci.extractors import is_youtube_url, extract_youtube, extract_article, extract_pdf, ExtractionError, RateLimitError
+import os
+from pci.extractors import is_youtube_url, extract_youtube, extract_article, extract_pdf, extract_text_file, ExtractionError, RateLimitError
 from pci.llm import summarize_and_tag
 from pci.embeddings import get_embedding
 from pci.db import insert_document
@@ -53,11 +53,19 @@ async def async_ingest_url(url: str):
     
     console.print(f"[bold green]Successfully ingested '{data['title']}' (ID: {doc_id})[/bold green]")
 
-async def async_ingest_pdf(file_path: str):
-    console.print(f"[bold blue]Processing PDF:[/bold blue] {file_path}")
+async def async_ingest_local_file(file_path: str):
+    console.print(f"[bold blue]Processing Local File:[/bold blue] {file_path}")
+    
+    ext = os.path.splitext(file_path)[1].lower()
     
     try:
-        data = await extract_pdf(file_path)
+        if ext == '.pdf':
+            data = await extract_pdf(file_path)
+        elif ext in ['.md', '.markdown', '.txt']:
+            data = await extract_text_file(file_path)
+        else:
+            console.print(f"[yellow]Unsupported file extension: {ext}. Skipping.[/yellow]")
+            return
     except ExtractionError as e:
         console.print(f"[red]Extraction Error:[/red] {e}")
         console.print("[yellow]Skipping ingestion to prevent garbage database entries.[/yellow]")
@@ -92,5 +100,5 @@ async def async_ingest_pdf(file_path: str):
         embedding=embedding
     )
     
-    console.print(f"[bold green]Successfully ingested PDF '{data['title']}' (ID: {doc_id})[/bold green]")
+    console.print(f"[bold green]Successfully ingested '{data['title']}' (ID: {doc_id})[/bold green]")
 

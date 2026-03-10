@@ -8,7 +8,7 @@ load_dotenv()
 
 import asyncio
 from pci.db import init_db, search_similar, search_keyword, get_all_documents
-from pci.ingest import async_ingest_url, async_ingest_pdf
+from pci.ingest import async_ingest_url, async_ingest_local_file
 from pci.embeddings import get_embedding
 
 app = typer.Typer(help="Personal Content Index")
@@ -22,14 +22,14 @@ def init():
 
 @app.command()
 def add(source: str):
-    """Add a new URL (Article or YouTube video) or a local PDF file to the index."""
+    """Add a new URL (Article or YouTube video) or a local file (.pdf, .md, .txt) to the index."""
     if not os.path.exists(os.environ.get("PCI_DB_PATH", "pci.db")):
         console.print("[yellow]Database not found. Initializing...[/yellow]")
         init_db()
     
-    # If the source is an existing local file, treat it as a PDF
+    # If the source is an existing local file, treat it as such
     if os.path.exists(source) and os.path.isfile(source):
-        asyncio.run(async_ingest_pdf(source))
+        asyncio.run(async_ingest_local_file(source))
     else:
         asyncio.run(async_ingest_url(source))
 
@@ -167,36 +167,31 @@ def import_playlist(
             console.print("[yellow]No playlist entries found. Are you sure this is a playlist URL?[/yellow]")
 
 @app.command()
-def import_pdf(path: str):
-    """Import a single PDF file into the index."""
-    if not os.path.exists(path):
-        console.print(f"[red]File not found: {path}[/red]")
-        return
-        
-    if not path.lower().endswith(".pdf"):
-        console.print(f"[yellow]Warning: {path} does not have a .pdf extension. Attempting to parse anyway.[/yellow]")
-        
-    if not os.path.exists(os.environ.get("PCI_DB_PATH", "pci.db")):
-        console.print("[yellow]Database not found. Initializing...[/yellow]")
-        init_db()
-        
-    asyncio.run(async_ingest_pdf(path))
-
-@app.command()
-def import_pdf_folder(path: str):
-    """Import all PDF files from a directory into the index."""
+def import_folder(path: str, ext: str = typer.Option(None, help="Filter by file extension (e.g., 'pdf', 'md', 'txt'). If omitted, imports all supported types.")):
+    """Import files from a directory into the index (.pdf, .md, .txt)."""
     if not os.path.exists(path) or not os.path.isdir(path):
         console.print(f"[red]Directory not found: {path}[/red]")
         return
         
-    pdf_files = []
+    supported_exts = {'.pdf', '.md', '.markdown', '.txt'}
+    if ext:
+        # Normalize filter
+        ext = f".{ext.removeprefix('.')}".lower()
+        if ext not in supported_exts:
+            console.print(f"[yellow]Warning: '{ext}' is not a typically supported extension. Proceeding anyway, but extraction may fail.[/yellow]")
+        filter_exts = {ext}
+    else:
+        filter_exts = supported_exts
+        
+    target_files = []
     for root, _, files in os.walk(path):
         for file in files:
-            if file.lower().endswith(".pdf"):
-                pdf_files.append(os.path.join(root, file))
+            file_ext = os.path.splitext(file)[1].lower()
+            if file_ext in filter_exts:
+                target_files.append(os.path.join(root, file))
                 
-    console.print(f"[green]Found {len(pdf_files)} PDF files in {path}.[/green]")
-    if not pdf_files:
+    console.print(f"[green]Found {len(target_files)} matching files in {path}.[/green]")
+    if not target_files:
         return
         
     if not os.path.exists(os.environ.get("PCI_DB_PATH", "pci.db")):
@@ -204,17 +199,17 @@ def import_pdf_folder(path: str):
         
     import time
     async def process_all():
-        semaphore = asyncio.Semaphore(5) # Local parsing, we can be slightly faster
+        semaphore = asyncio.Semaphore(5) # Local parsing
         
         async def bounded_ingest(f_path, index):
             async with semaphore:
-                console.print(f"\n[bold blue]Starting ({index}/{len(pdf_files)})[/bold blue]")
+                console.print(f"\n[bold blue]Starting ({index}/{len(target_files)})[/bold blue]: {os.path.basename(f_path)}")
                 try:
-                    await async_ingest_pdf(f_path)
+                    await async_ingest_local_file(f_path)
                 except Exception as e:
                     console.print(f"[red]Failed to ingest {f_path}: {e}[/red]")
                     
-        tasks = [bounded_ingest(f, i) for i, f in enumerate(pdf_files, 1)]
+        tasks = [bounded_ingest(f, i) for i, f in enumerate(target_files, 1)]
         await asyncio.gather(*tasks)
         
     start_time = time.time()

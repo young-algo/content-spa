@@ -69,11 +69,11 @@ The tool is accessible via the `pci` command once installed, or by running the m
   pci import-playlist <playlist_url>
   ```
 
-* **Import PDFs:**
-  Ingest a single PDF or an entire directory of PDFs.
+* **Import Local Files (PDF, Markdown, Text):**
+  Ingest an entire directory of documents. You can optionally filter by extension.
   ```bash
-  pci import-pdf path/to/document.pdf
-  pci import-pdf-folder path/to/folder/
+  pci import-folder path/to/my-documents/
+  pci import-folder path/to/my-obsidian-vault/ --ext md
   ```
 
 * **Export:**

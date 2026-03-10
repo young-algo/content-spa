@@ -163,3 +163,34 @@ async def extract_pdf(file_path: str) -> dict:
         if not isinstance(e, ExtractionError):
             raise ExtractionError(f"Failed to extract text from PDF {file_path}: {e}")
         raise
+
+async def extract_text_file(file_path: str) -> dict:
+    if not os.path.exists(file_path):
+        raise ExtractionError(f"File not found: {file_path}")
+        
+    try:
+        def read_file():
+            # Try utf-8 first, fallback to common encodings if needed
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return f.read()
+            except UnicodeDecodeError:
+                with open(file_path, 'r', encoding='latin-1') as f:
+                    return f.read()
+                    
+        content = await asyncio.to_thread(read_file)
+        
+        if not content.strip():
+            raise ExtractionError(f"File is empty or contains no readable text: {file_path}")
+            
+        title = os.path.basename(file_path)
+        
+        # Determine source type based on extension
+        ext = os.path.splitext(file_path)[1].lower()
+        source_type = "markdown" if ext in ['.md', '.markdown'] else "text"
+            
+        return {"title": title, "content": content, "source_type": source_type}
+    except Exception as e:
+        if not isinstance(e, ExtractionError):
+            raise ExtractionError(f"Failed to extract text from file {file_path}: {e}")
+        raise
