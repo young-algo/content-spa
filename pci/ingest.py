@@ -1,4 +1,5 @@
 import os
+import asyncio
 from pci.extractors import is_youtube_url, extract_youtube, extract_article, extract_pdf, extract_text_file, ExtractionError, RateLimitError
 from pci.llm import summarize_and_tag
 from pci.embeddings import get_embedding
