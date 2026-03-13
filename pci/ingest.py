@@ -49,7 +49,8 @@ async def async_ingest_url(url: str):
         source_type=data['source_type'],
         summary=summary,
         tags=tags,
-        embedding=embedding
+        embedding=embedding,
+        content=data['content'],
     )
     
     console.print(f"[bold green]Successfully ingested '{data['title']}' (ID: {doc_id})[/bold green]")
@@ -98,7 +99,8 @@ async def async_ingest_local_file(file_path: str):
         source_type=data['source_type'],
         summary=summary,
         tags=tags,
-        embedding=embedding
+        embedding=embedding,
+        content=data['content'],
     )
     
     console.print(f"[bold green]Successfully ingested '{data['title']}' (ID: {doc_id})[/bold green]")
