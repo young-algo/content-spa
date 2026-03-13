@@ -94,7 +94,7 @@ def search(
 
     if semantic:
         console.print("[dim]Generating embedding for query...[/dim]")
-        q_emb = get_embedding(query)
+        q_emb = asyncio.run(get_embedding(query))
         try:
             results = search_similar(q_emb, limit=5, source_type=source_type)
         except Exception as e:

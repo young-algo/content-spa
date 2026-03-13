@@ -1,6 +1,6 @@
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from typer.testing import CliRunner
 
@@ -77,6 +77,31 @@ class TestCliCommands(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertIn("Golf Video", result.stdout)
         self.assertNotIn("Golf Article", result.stdout)
+
+    def test_search_semantic_awaits_embedding_generation(self):
+        semantic_result = {
+            "id": 1,
+            "url": "https://example.com/elon",
+            "title": "Elon Profile",
+            "source_type": "article",
+            "summary": "summary for Elon Profile",
+            "tags": "elon,musk",
+            "created_at": "2026-03-13 00:00:00",
+            "is_read": 0,
+            "read_at": None,
+            "distance": 0.1234,
+        }
+
+        with patch("pci.cli.get_embedding", new=AsyncMock(return_value=[0.0] * db.EMBEDDING_DIM)) as mock_embedding, patch(
+            "pci.cli.search_similar",
+            return_value=[semantic_result],
+        ) as mock_search:
+            result = self.runner.invoke(cli.app, ["search", "Elon Musk"])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("Elon Profile", result.stdout)
+        mock_embedding.assert_awaited_once_with("Elon Musk")
+        mock_search.assert_called_once()
 
     def test_delete_multiple_documents(self):
         first_id = self.insert_sample("https://example.com/1", "One", "article")
