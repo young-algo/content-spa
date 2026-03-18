@@ -82,7 +82,7 @@ def insert_document(
     source_type: str,
     summary: str,
     tags: list[str],
-    embedding: list[float],
+    embedding: Optional[list[float]] = None,
     content: Optional[str] = None,
 ) -> int:
     conn = get_db()
@@ -108,15 +108,16 @@ def insert_document(
     cursor.execute("SELECT id FROM documents WHERE url = ?", (url,))
     doc_id = cursor.fetchone()[0]
 
-    embedding_bytes = struct.pack(f"{len(embedding)}f", *embedding)
-    cursor.execute("DELETE FROM vec_documents WHERE id = ?", (doc_id,))
-    cursor.execute(
-        """
-        INSERT INTO vec_documents (id, embedding)
-        VALUES (?, ?)
-        """,
-        (doc_id, embedding_bytes),
-    )
+    if embedding is not None:
+        embedding_bytes = struct.pack(f"{len(embedding)}f", *embedding)
+        cursor.execute("DELETE FROM vec_documents WHERE id = ?", (doc_id,))
+        cursor.execute(
+            """
+            INSERT INTO vec_documents (id, embedding)
+            VALUES (?, ?)
+            """,
+            (doc_id, embedding_bytes),
+        )
 
     conn.commit()
     conn.close()
@@ -130,6 +131,32 @@ def get_document(doc_id: int) -> Optional[sqlite3.Row]:
     result = cursor.fetchone()
     conn.close()
     return result
+
+
+def get_document_by_url(url: str) -> Optional[sqlite3.Row]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM documents WHERE url = ?", (url,))
+    result = cursor.fetchone()
+    conn.close()
+    return result
+
+
+def get_documents_by_urls(urls: list[str]) -> dict[str, sqlite3.Row]:
+    if not urls:
+        return {}
+
+    unique_urls = list(dict.fromkeys(urls))
+    placeholders = ", ".join("?" for _ in unique_urls)
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        f"SELECT * FROM documents WHERE url IN ({placeholders})",
+        unique_urls,
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return {row["url"]: row for row in rows}
 
 
 def list_documents(

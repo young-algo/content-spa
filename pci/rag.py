@@ -1,0 +1,496 @@
+import asyncio
+import json
+import logging
+import os
+import shutil
+from typing import Any, Optional
+
+import anthropic
+import numpy as np
+
+from pci.db import get_all_documents, get_documents_by_urls
+from pci.embeddings import MODEL_NAME, get_embedding_dimension, get_embeddings
+
+DEFAULT_LIGHTRAG_INDEX_MODEL = os.environ.get(
+    "PCI_LIGHTRAG_INDEX_MODEL",
+    os.environ.get("PCI_LIGHTRAG_MODEL", "claude-haiku-4-5-20251001"),
+)
+DEFAULT_LIGHTRAG_QUERY_MODEL = os.environ.get(
+    "PCI_LIGHTRAG_QUERY_MODEL",
+    "claude-sonnet-4-6",
+)
+DEFAULT_WORKING_DIR = os.environ.get("PCI_LIGHTRAG_DIR", ".pci_lightrag")
+DEFAULT_MAX_TOKENS = int(os.environ.get("PCI_LIGHTRAG_MAX_TOKENS", "4000"))
+DEFAULT_TEMPERATURE = float(os.environ.get("PCI_LIGHTRAG_TEMPERATURE", "0.1"))
+
+logging.getLogger("lightrag").setLevel(logging.WARNING)
+
+
+REINDEX_STATE_FILENAME = "reindex_state.json"
+
+
+def _reindex_state_path() -> str:
+    return os.path.join(DEFAULT_WORKING_DIR, REINDEX_STATE_FILENAME)
+
+
+def _doc_status_path() -> str:
+    return os.path.join(DEFAULT_WORKING_DIR, "kv_store_doc_status.json")
+
+
+def load_processed_doc_ids_from_lightrag() -> set[str]:
+    path = _doc_status_path()
+    if not os.path.exists(path):
+        return set()
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        return set()
+
+    processed_ids: set[str] = set()
+    for doc_id, payload in data.items():
+        if not str(doc_id).isdigit():
+            continue
+        if isinstance(payload, dict) and payload.get("status") == "processed":
+            processed_ids.add(str(doc_id))
+    return processed_ids
+
+
+def load_reindex_state() -> dict[str, Any]:
+    path = _reindex_state_path()
+    completed_ids = set(load_processed_doc_ids_from_lightrag())
+    last_completed_id: Optional[str] = None
+
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            completed_ids.update(str(item) for item in data.get("completed_ids", []) if str(item).isdigit())
+            raw_last_completed_id = data.get("last_completed_id")
+            last_completed_id = str(raw_last_completed_id) if raw_last_completed_id is not None else None
+        except Exception:
+            pass
+
+    if last_completed_id is None and completed_ids:
+        last_completed_id = max(completed_ids, key=int)
+
+    return {
+        "completed_ids": sorted(completed_ids, key=int),
+        "last_completed_id": last_completed_id,
+    }
+
+
+def save_reindex_state(completed_ids: set[str], last_completed_id: Optional[str]) -> None:
+    os.makedirs(DEFAULT_WORKING_DIR, exist_ok=True)
+    with open(_reindex_state_path(), "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "completed_ids": sorted(completed_ids, key=lambda value: int(value) if value.isdigit() else value),
+                "last_completed_id": last_completed_id,
+            },
+            f,
+            indent=2,
+        )
+
+
+def clear_reindex_state() -> None:
+    path = _reindex_state_path()
+    if os.path.exists(path):
+        os.remove(path)
+
+
+def rag_settings() -> dict[str, str]:
+    state = load_reindex_state()
+    return {
+        "working_dir": DEFAULT_WORKING_DIR,
+        "index_model": DEFAULT_LIGHTRAG_INDEX_MODEL,
+        "query_model": DEFAULT_LIGHTRAG_QUERY_MODEL,
+        "max_tokens": str(DEFAULT_MAX_TOKENS),
+        "temperature": str(DEFAULT_TEMPERATURE),
+        "anthropic_api_key_present": "yes" if os.environ.get("ANTHROPIC_API_KEY") else "no",
+        "reindex_state_path": _reindex_state_path(),
+        "resume_completed_count": str(len(state.get("completed_ids", []))),
+        "resume_last_completed_id": str(state.get("last_completed_id") or "-"),
+    }
+
+
+async def _anthropic_complete_for_model(
+    model: str,
+    prompt: str,
+    system_prompt: Optional[str] = None,
+    history_messages: Optional[list[dict[str, Any]]] = None,
+    stream: Optional[bool] = False,
+    **_: Any,
+):
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY is required for LightRAG indexing and semantic retrieval.")
+
+    client = anthropic.AsyncAnthropic(api_key=api_key)
+    messages: list[dict[str, Any]] = []
+
+    for message in history_messages or []:
+        role = message.get("role", "user")
+        if role not in {"user", "assistant"}:
+            role = "user"
+        content = str(message.get("content", "")).strip()
+        if content:
+            messages.append({"role": role, "content": content})
+
+    messages.append({"role": "user", "content": prompt})
+
+    system = system_prompt if system_prompt else anthropic.NOT_GIVEN
+
+    if stream:
+        async def generator():
+            async with client.messages.stream(
+                model=model,
+                max_tokens=DEFAULT_MAX_TOKENS,
+                temperature=DEFAULT_TEMPERATURE,
+                system=system,
+                messages=messages,
+            ) as response_stream:
+                async for text in response_stream.text_stream:
+                    yield text
+
+        return generator()
+
+    response = await client.messages.create(
+        model=model,
+        max_tokens=DEFAULT_MAX_TOKENS,
+        temperature=DEFAULT_TEMPERATURE,
+        system=system,
+        messages=messages,
+    )
+    return "".join(block.text for block in response.content if getattr(block, "type", None) == "text")
+
+
+async def _anthropic_index_complete(*args: Any, **kwargs: Any):
+    return await _anthropic_complete_for_model(DEFAULT_LIGHTRAG_INDEX_MODEL, *args, **kwargs)
+
+
+async def _anthropic_query_complete(*args: Any, **kwargs: Any):
+    return await _anthropic_complete_for_model(DEFAULT_LIGHTRAG_QUERY_MODEL, *args, **kwargs)
+
+
+async def _batch_embed(texts: list[str]) -> np.ndarray:
+    embeddings = await get_embeddings(texts)
+    return np.array(embeddings, dtype=np.float32)
+
+
+async def _create_rag():
+    try:
+        from lightrag import LightRAG
+        from lightrag.utils import EmbeddingFunc
+    except ImportError as exc:
+        raise RuntimeError(
+            "LightRAG is not installed. Run `uv sync` to install the lightrag-hku dependency."
+        ) from exc
+
+    embedding_dim = await get_embedding_dimension()
+
+    rag = LightRAG(
+        working_dir=DEFAULT_WORKING_DIR,
+        embedding_func=EmbeddingFunc(
+            embedding_dim=embedding_dim,
+            max_token_size=8192,
+            model_name=MODEL_NAME,
+            func=_batch_embed,
+        ),
+        llm_model_func=_anthropic_index_complete,
+        llm_model_name=DEFAULT_LIGHTRAG_INDEX_MODEL,
+    )
+    await rag.initialize_storages()
+    return rag
+
+
+async def _run_with_rag(callback):
+    rag = await _create_rag()
+    try:
+        return await callback(rag)
+    finally:
+        await rag.finalize_storages()
+
+
+def build_rag_document(
+    *,
+    title: str,
+    url: str,
+    source_type: str,
+    summary: str,
+    tags: list[str],
+    content: str,
+) -> str:
+    header = [
+        f"Title: {title}",
+        f"Source: {url}",
+        f"Type: {source_type}",
+    ]
+    if tags:
+        header.append(f"Tags: {', '.join(tags)}")
+    if summary:
+        header.append(f"Summary: {summary}")
+
+    return "\n".join([
+        "# Document Metadata",
+        *header,
+        "",
+        "# Document Content",
+        content,
+    ])
+
+
+async def async_index_document(
+    *,
+    doc_id: int,
+    title: str,
+    url: str,
+    source_type: str,
+    summary: str,
+    tags: list[str],
+    content: str,
+) -> str:
+    document_text = build_rag_document(
+        title=title,
+        url=url,
+        source_type=source_type,
+        summary=summary,
+        tags=tags,
+        content=content,
+    )
+
+    async def _index(rag):
+        return await rag.ainsert(document_text, ids=str(doc_id), file_paths=url)
+
+    return await _run_with_rag(_index)
+
+
+async def async_delete_document(doc_id: int) -> tuple[bool, Optional[str]]:
+    async def _delete(rag):
+        return await rag.adelete_by_doc_id(str(doc_id))
+
+    try:
+        await _run_with_rag(_delete)
+        return True, None
+    except Exception as exc:
+        return False, str(exc)
+
+
+async def async_query_data(
+    query: str,
+    *,
+    mode: str = "mix",
+    top_k: int = 5,
+    chunk_top_k: Optional[int] = None,
+) -> dict[str, Any]:
+    async def _query(rag):
+        from lightrag import QueryParam
+
+        return await rag.aquery_data(
+            query,
+            QueryParam(
+                mode=mode,
+                top_k=max(top_k, 1),
+                chunk_top_k=max(chunk_top_k or top_k, 1),
+                model_func=_anthropic_query_complete,
+            ),
+        )
+
+    return await _run_with_rag(_query)
+
+
+async def async_query_answer(
+    query: str,
+    *,
+    mode: str = "mix",
+    top_k: int = 5,
+    chunk_top_k: Optional[int] = None,
+    response_type: str = "Multiple Paragraphs",
+    include_references: bool = False,
+) -> dict[str, Any]:
+    async def _query(rag):
+        from lightrag import QueryParam
+
+        result = await rag.aquery_llm(
+            query,
+            QueryParam(
+                mode=mode,
+                top_k=max(top_k, 1),
+                chunk_top_k=max(chunk_top_k or top_k, 1),
+                response_type=response_type,
+                model_func=_anthropic_query_complete,
+                include_references=include_references,
+            ),
+        )
+        llm_response = result.get("llm_response", {})
+        return {
+            "answer": llm_response.get("content") or "",
+            "raw_data": {
+                "status": result.get("status"),
+                "message": result.get("message"),
+                "data": result.get("data", {}),
+                "metadata": result.get("metadata", {}),
+            },
+        }
+
+    return await _run_with_rag(_query)
+
+
+async def async_reset_rag_index() -> None:
+    if os.path.exists(DEFAULT_WORKING_DIR):
+        await asyncio.to_thread(shutil.rmtree, DEFAULT_WORKING_DIR)
+    await asyncio.to_thread(clear_reindex_state)
+
+
+async def async_reindex_all_documents(reset: bool = True, resume: bool = True) -> dict[str, int | bool]:
+    documents = await asyncio.to_thread(get_all_documents)
+
+    if reset:
+        await async_reset_rag_index()
+
+    state = await asyncio.to_thread(load_reindex_state)
+    completed_ids = set(state.get("completed_ids", [])) if resume and not reset else set()
+    last_completed_id = state.get("last_completed_id") if resume and not reset else None
+    documents_to_index = [doc for doc in documents if str(doc["id"]) not in completed_ids]
+
+    async def _reindex(rag):
+        nonlocal last_completed_id
+        indexed = 0
+        skipped = len(documents) - len(documents_to_index)
+        for doc in documents_to_index:
+            doc_id = str(doc["id"])
+            await rag.ainsert(
+                build_rag_document(
+                    title=doc["title"] or doc["url"],
+                    url=doc["url"],
+                    source_type=doc["source_type"] or "unknown",
+                    summary=doc["summary"] or "",
+                    tags=[tag.strip() for tag in (doc["tags"] or "").split(",") if tag.strip()],
+                    content=doc["content"] or "",
+                ),
+                ids=doc_id,
+                file_paths=doc["url"],
+            )
+            completed_ids.add(doc_id)
+            last_completed_id = doc_id
+            indexed += 1
+            await asyncio.to_thread(save_reindex_state, completed_ids, last_completed_id)
+        return {
+            "indexed": indexed,
+            "skipped": skipped,
+            "total": len(documents),
+            "resumed": bool(resume and not reset),
+        }
+
+    result = await _run_with_rag(_reindex)
+    await asyncio.to_thread(save_reindex_state, completed_ids, last_completed_id)
+    return result
+
+
+def _reference_path(item: dict[str, Any], ref_map: dict[str, str]) -> Optional[str]:
+    file_path = item.get("file_path")
+    if file_path:
+        return file_path
+    reference_id = item.get("reference_id")
+    if reference_id:
+        return ref_map.get(reference_id)
+    return None
+
+
+def filter_query_data_by_source_type(raw_data: dict[str, Any], source_type: Optional[str]) -> dict[str, Any]:
+    if not source_type or raw_data.get("status") != "success":
+        return raw_data
+
+    data = raw_data.get("data", {})
+    refs = data.get("references", [])
+    ref_map = {ref.get("reference_id"): ref.get("file_path") for ref in refs if ref.get("reference_id")}
+    url_map = get_documents_by_urls([ref.get("file_path") for ref in refs if ref.get("file_path")])
+    allowed_urls = {
+        url
+        for url, doc in url_map.items()
+        if (doc["source_type"] or "").lower() == source_type.lower()
+    }
+
+    filtered_refs = [ref for ref in refs if ref.get("file_path") in allowed_urls]
+    allowed_ref_ids = {ref.get("reference_id") for ref in filtered_refs if ref.get("reference_id")}
+
+    def _keep(item: dict[str, Any]) -> bool:
+        path = _reference_path(item, ref_map)
+        if path in allowed_urls:
+            return True
+        reference_id = item.get("reference_id")
+        return reference_id in allowed_ref_ids
+
+    filtered = {
+        **raw_data,
+        "data": {
+            "entities": [item for item in data.get("entities", []) if _keep(item)],
+            "relationships": [item for item in data.get("relationships", []) if _keep(item)],
+            "chunks": [item for item in data.get("chunks", []) if _keep(item)],
+            "references": filtered_refs,
+        },
+    }
+    return filtered
+
+
+def build_search_results(raw_data: dict[str, Any], source_type: Optional[str] = None) -> list[dict[str, Any]]:
+    filtered = filter_query_data_by_source_type(raw_data, source_type)
+    if filtered.get("status") != "success":
+        return []
+
+    data = filtered.get("data", {})
+    references = data.get("references", [])
+    ref_map = {ref.get("reference_id"): ref.get("file_path") for ref in references if ref.get("reference_id")}
+    docs_by_url = get_documents_by_urls([ref.get("file_path") for ref in references if ref.get("file_path")])
+
+    grouped: dict[str, dict[str, Any]] = {}
+
+    for ref in references:
+        url = ref.get("file_path")
+        if not url:
+            continue
+        doc = docs_by_url.get(url)
+        grouped[url] = {
+            "id": doc["id"] if doc else None,
+            "url": url,
+            "title": doc["title"] if doc else url,
+            "source_type": doc["source_type"] if doc else None,
+            "summary": doc["summary"] if doc else None,
+            "is_read": doc["is_read"] if doc else 0,
+            "read_at": doc["read_at"] if doc else None,
+            "chunk_count": 0,
+            "entity_count": 0,
+            "relationship_count": 0,
+            "snippet": None,
+        }
+
+    for chunk in data.get("chunks", []):
+        url = _reference_path(chunk, ref_map)
+        if not url or url not in grouped:
+            continue
+        grouped[url]["chunk_count"] += 1
+        if not grouped[url]["snippet"]:
+            grouped[url]["snippet"] = str(chunk.get("content", "")).strip().replace("\n", " ")
+
+    for entity in data.get("entities", []):
+        url = _reference_path(entity, ref_map)
+        if url and url in grouped:
+            grouped[url]["entity_count"] += 1
+
+    for relationship in data.get("relationships", []):
+        url = _reference_path(relationship, ref_map)
+        if url and url in grouped:
+            grouped[url]["relationship_count"] += 1
+
+    results = list(grouped.values())
+    results.sort(
+        key=lambda item: (
+            item["chunk_count"],
+            item["entity_count"],
+            item["relationship_count"],
+            1 if item["id"] is not None else 0,
+        ),
+        reverse=True,
+    )
+    return results
