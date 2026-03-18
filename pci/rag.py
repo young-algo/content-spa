@@ -11,17 +11,28 @@ import numpy as np
 from pci.db import get_all_documents, get_documents_by_urls
 from pci.embeddings import MODEL_NAME, get_embedding_dimension, get_embeddings
 
-DEFAULT_LIGHTRAG_INDEX_MODEL = os.environ.get(
-    "PCI_LIGHTRAG_INDEX_MODEL",
-    os.environ.get("PCI_LIGHTRAG_MODEL", "claude-haiku-4-5-20251001"),
-)
-DEFAULT_LIGHTRAG_QUERY_MODEL = os.environ.get(
-    "PCI_LIGHTRAG_QUERY_MODEL",
-    "claude-sonnet-4-6",
-)
-DEFAULT_WORKING_DIR = os.environ.get("PCI_LIGHTRAG_DIR", ".pci_lightrag")
-DEFAULT_MAX_TOKENS = int(os.environ.get("PCI_LIGHTRAG_MAX_TOKENS", "4000"))
-DEFAULT_TEMPERATURE = float(os.environ.get("PCI_LIGHTRAG_TEMPERATURE", "0.1"))
+
+def _index_model() -> str:
+    return os.environ.get(
+        "PCI_LIGHTRAG_INDEX_MODEL",
+        os.environ.get("PCI_LIGHTRAG_MODEL", "claude-haiku-4-5-20251001"),
+    )
+
+
+def _query_model() -> str:
+    return os.environ.get("PCI_LIGHTRAG_QUERY_MODEL", "claude-sonnet-4-6")
+
+
+def _working_dir() -> str:
+    return os.environ.get("PCI_LIGHTRAG_DIR", ".pci_lightrag")
+
+
+def _max_tokens() -> int:
+    return int(os.environ.get("PCI_LIGHTRAG_MAX_TOKENS", "4000"))
+
+
+def _temperature() -> float:
+    return float(os.environ.get("PCI_LIGHTRAG_TEMPERATURE", "0.1"))
 
 logging.getLogger("lightrag").setLevel(logging.WARNING)
 
@@ -30,11 +41,11 @@ REINDEX_STATE_FILENAME = "reindex_state.json"
 
 
 def _reindex_state_path() -> str:
-    return os.path.join(DEFAULT_WORKING_DIR, REINDEX_STATE_FILENAME)
+    return os.path.join(_working_dir(), REINDEX_STATE_FILENAME)
 
 
 def _doc_status_path() -> str:
-    return os.path.join(DEFAULT_WORKING_DIR, "kv_store_doc_status.json")
+    return os.path.join(_working_dir(), "kv_store_doc_status.json")
 
 
 def load_processed_doc_ids_from_lightrag() -> set[str]:
@@ -82,7 +93,7 @@ def load_reindex_state() -> dict[str, Any]:
 
 
 def save_reindex_state(completed_ids: set[str], last_completed_id: Optional[str]) -> None:
-    os.makedirs(DEFAULT_WORKING_DIR, exist_ok=True)
+    os.makedirs(_working_dir(), exist_ok=True)
     with open(_reindex_state_path(), "w", encoding="utf-8") as f:
         json.dump(
             {
@@ -103,11 +114,11 @@ def clear_reindex_state() -> None:
 def rag_settings() -> dict[str, str]:
     state = load_reindex_state()
     return {
-        "working_dir": DEFAULT_WORKING_DIR,
-        "index_model": DEFAULT_LIGHTRAG_INDEX_MODEL,
-        "query_model": DEFAULT_LIGHTRAG_QUERY_MODEL,
-        "max_tokens": str(DEFAULT_MAX_TOKENS),
-        "temperature": str(DEFAULT_TEMPERATURE),
+        "working_dir": _working_dir(),
+        "index_model": _index_model(),
+        "query_model": _query_model(),
+        "max_tokens": str(_max_tokens()),
+        "temperature": str(_temperature()),
         "anthropic_api_key_present": "yes" if os.environ.get("ANTHROPIC_API_KEY") else "no",
         "reindex_state_path": _reindex_state_path(),
         "resume_completed_count": str(len(state.get("completed_ids", []))),
@@ -146,8 +157,8 @@ async def _anthropic_complete_for_model(
         async def generator():
             async with client.messages.stream(
                 model=model,
-                max_tokens=DEFAULT_MAX_TOKENS,
-                temperature=DEFAULT_TEMPERATURE,
+                max_tokens=_max_tokens(),
+                temperature=_temperature(),
                 system=system,
                 messages=messages,
             ) as response_stream:
@@ -158,8 +169,8 @@ async def _anthropic_complete_for_model(
 
     response = await client.messages.create(
         model=model,
-        max_tokens=DEFAULT_MAX_TOKENS,
-        temperature=DEFAULT_TEMPERATURE,
+        max_tokens=_max_tokens(),
+        temperature=_temperature(),
         system=system,
         messages=messages,
     )
@@ -167,11 +178,11 @@ async def _anthropic_complete_for_model(
 
 
 async def _anthropic_index_complete(*args: Any, **kwargs: Any):
-    return await _anthropic_complete_for_model(DEFAULT_LIGHTRAG_INDEX_MODEL, *args, **kwargs)
+    return await _anthropic_complete_for_model(_index_model(), *args, **kwargs)
 
 
 async def _anthropic_query_complete(*args: Any, **kwargs: Any):
-    return await _anthropic_complete_for_model(DEFAULT_LIGHTRAG_QUERY_MODEL, *args, **kwargs)
+    return await _anthropic_complete_for_model(_query_model(), *args, **kwargs)
 
 
 async def _batch_embed(texts: list[str]) -> np.ndarray:
@@ -179,7 +190,55 @@ async def _batch_embed(texts: list[str]) -> np.ndarray:
     return np.array(embeddings, dtype=np.float32)
 
 
-async def _create_rag():
+async def _noop_embed(texts: list[str], embedding_dim: int) -> np.ndarray:
+    return np.zeros((len(texts), embedding_dim), dtype=np.float32)
+
+
+def _vector_db_paths() -> list[str]:
+    working_dir = _working_dir()
+    return [
+        os.path.join(working_dir, "vdb_chunks.json"),
+        os.path.join(working_dir, "vdb_entities.json"),
+        os.path.join(working_dir, "vdb_relationships.json"),
+    ]
+
+
+def _has_lightrag_artifacts() -> bool:
+    working_dir = _working_dir()
+    if not os.path.exists(working_dir):
+        return False
+
+    interesting_files = {
+        "kv_store_doc_status.json",
+        "kv_store_full_docs.json",
+        "kv_store_full_entities.json",
+        "kv_store_full_relations.json",
+        "kv_store_text_chunks.json",
+        "graph_chunk_entity_relation.graphml",
+        "vdb_chunks.json",
+        "vdb_entities.json",
+        "vdb_relationships.json",
+    }
+    return any(os.path.exists(os.path.join(working_dir, name)) for name in interesting_files)
+
+
+def _stored_embedding_dimension() -> Optional[int]:
+    for path in _vector_db_paths():
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                payload = json.load(f)
+        except Exception:
+            continue
+
+        embedding_dim = payload.get("embedding_dim") if isinstance(payload, dict) else None
+        if isinstance(embedding_dim, int) and embedding_dim > 0:
+            return embedding_dim
+    return None
+
+
+async def _create_rag(*, require_embedding_api: bool = True):
     try:
         from lightrag import LightRAG
         from lightrag.utils import EmbeddingFunc
@@ -188,25 +247,39 @@ async def _create_rag():
             "LightRAG is not installed. Run `uv sync` to install the lightrag-hku dependency."
         ) from exc
 
-    embedding_dim = await get_embedding_dimension()
-
-    rag = LightRAG(
-        working_dir=DEFAULT_WORKING_DIR,
-        embedding_func=EmbeddingFunc(
+    if require_embedding_api:
+        embedding_dim = await get_embedding_dimension()
+        embedding_func = EmbeddingFunc(
             embedding_dim=embedding_dim,
             max_token_size=8192,
             model_name=MODEL_NAME,
             func=_batch_embed,
-        ),
+        )
+    else:
+        embedding_dim = _stored_embedding_dimension()
+        if embedding_dim is None:
+            raise RuntimeError(
+                "Unable to determine the existing LightRAG embedding dimension from local storage."
+            )
+        embedding_func = EmbeddingFunc(
+            embedding_dim=embedding_dim,
+            max_token_size=8192,
+            model_name=MODEL_NAME,
+            func=lambda texts: _noop_embed(texts, embedding_dim),
+        )
+
+    rag = LightRAG(
+        working_dir=_working_dir(),
+        embedding_func=embedding_func,
         llm_model_func=_anthropic_index_complete,
-        llm_model_name=DEFAULT_LIGHTRAG_INDEX_MODEL,
+        llm_model_name=_index_model(),
     )
     await rag.initialize_storages()
     return rag
 
 
-async def _run_with_rag(callback):
-    rag = await _create_rag()
+async def _run_with_rag(callback, *, require_embedding_api: bool = True):
+    rag = await _create_rag(require_embedding_api=require_embedding_api)
     try:
         return await callback(rag)
     finally:
@@ -270,11 +343,26 @@ async def async_delete_document(doc_id: int) -> tuple[bool, Optional[str]]:
     async def _delete(rag):
         return await rag.adelete_by_doc_id(str(doc_id))
 
-    try:
-        await _run_with_rag(_delete)
+    if not _has_lightrag_artifacts():
         return True, None
+
+    try:
+        result = await _run_with_rag(_delete, require_embedding_api=False)
     except Exception as exc:
         return False, str(exc)
+
+    status = getattr(result, "status", None)
+    message = getattr(result, "message", None)
+    if isinstance(result, dict):
+        status = result.get("status", status)
+        message = result.get("message", message)
+
+    if status in {"success", "not_found"}:
+        return True, None
+
+    if status:
+        return False, message or f"LightRAG deletion returned status '{status}'."
+    return False, message or "LightRAG deletion did not report success."
 
 
 async def async_query_data(
@@ -338,8 +426,9 @@ async def async_query_answer(
 
 
 async def async_reset_rag_index() -> None:
-    if os.path.exists(DEFAULT_WORKING_DIR):
-        await asyncio.to_thread(shutil.rmtree, DEFAULT_WORKING_DIR)
+    working_dir = _working_dir()
+    if os.path.exists(working_dir):
+        await asyncio.to_thread(shutil.rmtree, working_dir)
     await asyncio.to_thread(clear_reindex_state)
 
 

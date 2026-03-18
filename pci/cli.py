@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
 
+load_dotenv()
+
 from pci.db import (
     delete_document as delete_document_record,
     get_all_documents,
@@ -34,8 +36,6 @@ from pci.rag import (
     filter_query_data_by_source_type,
     rag_settings,
 )
-
-load_dotenv()
 
 app = typer.Typer(help="Personal Content Index")
 console = Console()
