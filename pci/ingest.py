@@ -47,6 +47,20 @@ async def _store_and_index_document(*, url: str, data: dict, summary: str, tags:
     except Exception:
         if previous_document is not None:
             await asyncio.to_thread(restore_document, previous_document)
+            try:
+                await async_index_document(
+                    doc_id=int(previous_document["id"]),
+                    title=previous_document["title"] or previous_document["url"],
+                    url=previous_document["url"],
+                    source_type=previous_document["source_type"] or "unknown",
+                    summary=previous_document["summary"] or "",
+                    tags=[tag.strip() for tag in (previous_document["tags"] or "").split(",") if tag.strip()],
+                    content=previous_document["content"] or "",
+                )
+            except Exception as restore_exc:
+                console.print(
+                    f"[yellow]LightRAG rollback warning for document {doc_id}: failed to restore previous index state ({restore_exc})[/yellow]"
+                )
         else:
             rag_deleted, rag_error = await async_delete_document(doc_id)
             if not rag_deleted and rag_error:

@@ -50,8 +50,9 @@ class TestIngestAtomicity(unittest.IsolatedAsyncioTestCase):
         )
         db.mark_read(doc_id)
 
+        mock_index = AsyncMock(side_effect=[RuntimeError("index failed"), "restored"])
         with (
-            patch("pci.ingest.async_index_document", new=AsyncMock(side_effect=RuntimeError("index failed"))),
+            patch("pci.ingest.async_index_document", new=mock_index),
             patch("pci.ingest.async_delete_document", new=AsyncMock(return_value=(True, None))) as mock_delete,
         ):
             with self.assertRaisesRegex(RuntimeError, "index failed"):
@@ -75,4 +76,12 @@ class TestIngestAtomicity(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(restored["content"], "original content")
         self.assertEqual(restored["is_read"], 1)
         self.assertIsNotNone(restored["read_at"])
+        self.assertEqual(mock_index.await_count, 2)
+        restore_call = mock_index.await_args_list[1].kwargs
+        self.assertEqual(restore_call["doc_id"], doc_id)
+        self.assertEqual(restore_call["title"], "Original Title")
+        self.assertEqual(restore_call["source_type"], "article")
+        self.assertEqual(restore_call["summary"], "original summary")
+        self.assertEqual(restore_call["tags"], ["old"])
+        self.assertEqual(restore_call["content"], "original content")
         mock_delete.assert_not_awaited()

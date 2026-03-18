@@ -247,6 +247,7 @@ async def _create_rag(*, require_embedding_api: bool = True):
             "LightRAG is not installed. Run `uv sync` to install the lightrag-hku dependency."
         ) from exc
 
+    cleanup_paths: list[str] = []
     if require_embedding_api:
         embedding_dim = await get_embedding_dimension()
         embedding_func = EmbeddingFunc(
@@ -258,9 +259,8 @@ async def _create_rag(*, require_embedding_api: bool = True):
     else:
         embedding_dim = _stored_embedding_dimension()
         if embedding_dim is None:
-            raise RuntimeError(
-                "Unable to determine the existing LightRAG embedding dimension from local storage."
-            )
+            cleanup_paths = [path for path in _vector_db_paths() if not os.path.exists(path)]
+            embedding_dim = 1
         embedding_func = EmbeddingFunc(
             embedding_dim=embedding_dim,
             max_token_size=8192,
@@ -275,15 +275,23 @@ async def _create_rag(*, require_embedding_api: bool = True):
         llm_model_name=_index_model(),
     )
     await rag.initialize_storages()
-    return rag
+    return rag, cleanup_paths
 
 
 async def _run_with_rag(callback, *, require_embedding_api: bool = True):
-    rag = await _create_rag(require_embedding_api=require_embedding_api)
+    rag, cleanup_paths = await _create_rag(require_embedding_api=require_embedding_api)
     try:
         return await callback(rag)
     finally:
-        await rag.finalize_storages()
+        try:
+            await rag.finalize_storages()
+        finally:
+            for path in cleanup_paths:
+                try:
+                    if os.path.exists(path):
+                        os.remove(path)
+                except OSError:
+                    pass
 
 
 def build_rag_document(
@@ -314,6 +322,15 @@ def build_rag_document(
     ])
 
 
+async def _refresh_document_id(doc_id: int) -> None:
+    if not _has_lightrag_artifacts():
+        return
+
+    deleted, error = await async_delete_document(doc_id)
+    if not deleted:
+        raise RuntimeError(error or f"Failed to refresh existing LightRAG document {doc_id} before reindexing.")
+
+
 async def async_index_document(
     *,
     doc_id: int,
@@ -333,10 +350,26 @@ async def async_index_document(
         content=content,
     )
 
+    await _refresh_document_id(doc_id)
+
     async def _index(rag):
         return await rag.ainsert(document_text, ids=str(doc_id), file_paths=url)
 
     return await _run_with_rag(_index)
+
+
+def _coerce_delete_result(result: Any) -> tuple[bool, Optional[str]]:
+    status = getattr(result, "status", None)
+    message = getattr(result, "message", None)
+    if isinstance(result, dict):
+        status = result.get("status", status)
+        message = result.get("message", message)
+
+    if status in {"success", "not_found"}:
+        return True, None
+    if status:
+        return False, message or f"LightRAG deletion returned status '{status}'."
+    return False, message or "LightRAG deletion did not report success."
 
 
 async def async_delete_document(doc_id: int) -> tuple[bool, Optional[str]]:
@@ -351,18 +384,7 @@ async def async_delete_document(doc_id: int) -> tuple[bool, Optional[str]]:
     except Exception as exc:
         return False, str(exc)
 
-    status = getattr(result, "status", None)
-    message = getattr(result, "message", None)
-    if isinstance(result, dict):
-        status = result.get("status", status)
-        message = result.get("message", message)
-
-    if status in {"success", "not_found"}:
-        return True, None
-
-    if status:
-        return False, message or f"LightRAG deletion returned status '{status}'."
-    return False, message or "LightRAG deletion did not report success."
+    return _coerce_delete_result(result)
 
 
 async def async_query_data(
@@ -449,6 +471,11 @@ async def async_reindex_all_documents(reset: bool = True, resume: bool = True) -
         skipped = len(documents) - len(documents_to_index)
         for doc in documents_to_index:
             doc_id = str(doc["id"])
+            delete_result = await rag.adelete_by_doc_id(doc_id)
+            deleted, delete_error = _coerce_delete_result(delete_result)
+            if not deleted:
+                raise RuntimeError(delete_error or f"Failed to refresh LightRAG document {doc_id} before reindexing.")
+
             await rag.ainsert(
                 build_rag_document(
                     title=doc["title"] or doc["url"],
