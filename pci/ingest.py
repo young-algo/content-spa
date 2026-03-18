@@ -3,7 +3,7 @@ import os
 
 from rich.console import Console
 
-from pci.db import insert_document
+from pci.db import delete_document, get_document_by_url, insert_document, restore_document
 from pci.extractors import (
     ExtractionError,
     RateLimitError,
@@ -14,12 +14,14 @@ from pci.extractors import (
     is_youtube_url,
 )
 from pci.llm import summarize_and_tag
-from pci.rag import async_index_document
+from pci.rag import async_delete_document, async_index_document
 
 console = Console()
 
 
 async def _store_and_index_document(*, url: str, data: dict, summary: str, tags: list[str]) -> int:
+    previous_document = await asyncio.to_thread(get_document_by_url, url)
+
     console.print("[cyan]Storing metadata locally...[/cyan]")
     doc_id = await asyncio.to_thread(
         insert_document,
@@ -32,15 +34,26 @@ async def _store_and_index_document(*, url: str, data: dict, summary: str, tags:
     )
 
     console.print("[cyan]Indexing with LightRAG...[/cyan]")
-    await async_index_document(
-        doc_id=doc_id,
-        title=data["title"],
-        url=url,
-        source_type=data["source_type"],
-        summary=summary,
-        tags=tags,
-        content=data["content"],
-    )
+    try:
+        await async_index_document(
+            doc_id=doc_id,
+            title=data["title"],
+            url=url,
+            source_type=data["source_type"],
+            summary=summary,
+            tags=tags,
+            content=data["content"],
+        )
+    except Exception:
+        if previous_document is not None:
+            await asyncio.to_thread(restore_document, previous_document)
+        else:
+            rag_deleted, rag_error = await async_delete_document(doc_id)
+            if not rag_deleted and rag_error:
+                console.print(f"[yellow]LightRAG rollback warning for document {doc_id}: {rag_error}[/yellow]")
+            await asyncio.to_thread(delete_document, doc_id)
+        raise
+
     return doc_id
 
 

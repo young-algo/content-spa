@@ -142,6 +142,43 @@ def get_document_by_url(url: str) -> Optional[sqlite3.Row]:
     return result
 
 
+def restore_document(document: sqlite3.Row | dict[str, Any]) -> int:
+    record = dict(document)
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO documents (id, url, title, source_type, summary, tags, content, is_read, read_at, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            url=excluded.url,
+            title=excluded.title,
+            source_type=excluded.source_type,
+            summary=excluded.summary,
+            tags=excluded.tags,
+            content=excluded.content,
+            is_read=excluded.is_read,
+            read_at=excluded.read_at,
+            created_at=excluded.created_at
+        """,
+        (
+            record["id"],
+            record["url"],
+            record["title"],
+            record["source_type"],
+            record["summary"],
+            record["tags"],
+            record["content"],
+            record["is_read"],
+            record["read_at"],
+            record["created_at"],
+        ),
+    )
+    conn.commit()
+    conn.close()
+    return int(record["id"])
+
+
 def get_documents_by_urls(urls: list[str]) -> dict[str, sqlite3.Row]:
     if not urls:
         return {}

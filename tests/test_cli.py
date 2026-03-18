@@ -103,7 +103,34 @@ class TestCliCommands(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         self.assertIn("Elon Profile", result.stdout)
-        mock_query.assert_awaited_once()
+        mock_query.assert_awaited_once_with("Elon Musk", mode="mix", top_k=5, chunk_top_k=5)
+
+    def test_search_semantic_overfetches_when_type_filter_is_applied(self):
+        self.insert_sample("https://example.com/video", "Golf Video", "youtube", ["golf"])
+        raw_data = {
+            "status": "success",
+            "message": "ok",
+            "data": {
+                "references": [{"reference_id": "1", "file_path": "https://example.com/video"}],
+                "chunks": [
+                    {
+                        "reference_id": "1",
+                        "file_path": "https://example.com/video",
+                        "content": "Golf swing lesson",
+                    }
+                ],
+                "entities": [],
+                "relationships": [],
+            },
+            "metadata": {"query_mode": "mix"},
+        }
+
+        with patch("pci.cli.async_query_data", new=AsyncMock(return_value=raw_data)) as mock_query:
+            result = self.runner.invoke(cli.app, ["search", "Golf", "--type", "youtube", "--limit", "1"])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("Golf Video", result.stdout)
+        mock_query.assert_awaited_once_with("Golf", mode="mix", top_k=20, chunk_top_k=20)
 
     def test_ask_returns_paragraph_answer(self):
         answer_result = {
@@ -213,3 +240,13 @@ class TestCliCommands(unittest.TestCase):
         self.assertIn("Deleted 2 document(s).", result.stdout)
         self.assertIsNone(db.get_document(first_id))
         self.assertIsNone(db.get_document(second_id))
+
+    def test_delete_keeps_sqlite_row_when_lightrag_cleanup_fails(self):
+        doc_id = self.insert_sample("https://example.com/stuck", "Stuck", "article")
+
+        with patch("pci.cli.async_delete_document", new=AsyncMock(return_value=(False, "storage error"))):
+            result = self.runner.invoke(cli.app, ["delete", str(doc_id)], input="y\n")
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("Skipped SQLite deletion", result.stdout)
+        self.assertIsNotNone(db.get_document(doc_id))

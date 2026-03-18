@@ -40,6 +40,8 @@ load_dotenv()
 app = typer.Typer(help="Personal Content Index")
 console = Console()
 LIGHTRAG_MODES = "naive, local, global, hybrid, mix"
+SEMANTIC_FILTER_FETCH_MULTIPLIER = 5
+SEMANTIC_FILTER_FETCH_MINIMUM = 20
 
 
 def ensure_db_ready() -> None:
@@ -61,6 +63,12 @@ def truncate_text(text: Optional[str], length: int = 60) -> str:
 
 def status_label(is_read: int) -> str:
     return "read" if is_read else "unread"
+
+
+def semantic_search_fetch_limit(limit: int, source_type: Optional[str]) -> int:
+    if not source_type:
+        return limit
+    return max(limit * SEMANTIC_FILTER_FETCH_MULTIPLIER, SEMANTIC_FILTER_FETCH_MINIMUM)
 
 
 def open_document_url(doc: dict | object, mark_as_read_after_open: bool = False) -> None:
@@ -204,8 +212,16 @@ def search(
 
     if semantic:
         console.print(f"[dim]LightRAG mode: {mode}[/dim]")
+        fetch_limit = semantic_search_fetch_limit(limit, source_type)
         try:
-            raw_data = asyncio.run(async_query_data(query, mode=mode, top_k=limit, chunk_top_k=max(limit, 5)))
+            raw_data = asyncio.run(
+                async_query_data(
+                    query,
+                    mode=mode,
+                    top_k=fetch_limit,
+                    chunk_top_k=max(fetch_limit, 5),
+                )
+            )
             results = build_search_results(raw_data, source_type=source_type)[:limit]
         except Exception as e:
             console.print(f"[red]Error during LightRAG search: {e}[/red]")
@@ -489,13 +505,22 @@ def delete(ids: List[int] = typer.Argument(..., help="One or more document IDs t
         return
 
     deleted_count = 0
+    blocked_ids: list[str] = []
     for doc_id in ids:
         rag_deleted, rag_error = asyncio.run(async_delete_document(doc_id))
-        if not rag_deleted and rag_error:
-            console.print(f"[yellow]LightRAG warning for document {doc_id}: {rag_error}[/yellow]")
+        if not rag_deleted:
+            if rag_error:
+                console.print(f"[yellow]LightRAG warning for document {doc_id}: {rag_error}[/yellow]")
+            blocked_ids.append(str(doc_id))
+            continue
 
         if delete_document_record(doc_id):
             deleted_count += 1
+
+    if blocked_ids:
+        console.print(
+            f"[yellow]Skipped SQLite deletion for document(s) {', '.join(blocked_ids)} because LightRAG cleanup did not succeed.[/yellow]"
+        )
 
     console.print(f"[green]Deleted {deleted_count} document(s).[/green]")
 
