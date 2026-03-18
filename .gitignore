@@ -7,3 +7,4 @@ __pycache__/
 .claude/
 .bg-shell/
 pci/.hf_cache/
+.pci_lightrag/

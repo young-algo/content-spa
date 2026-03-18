@@ -10,8 +10,10 @@ from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
 
+load_dotenv()
+
 from pci.db import (
-    delete_document,
+    delete_document as delete_document_record,
     get_all_documents,
     get_document,
     get_stats,
@@ -22,15 +24,24 @@ from pci.db import (
     mark_unread,
     migrate_db,
     search_keyword,
-    search_similar,
 )
-from pci.embeddings import get_embedding
+from pci.embeddings import embedding_settings
 from pci.ingest import async_ingest_local_file, async_ingest_url
-
-load_dotenv()
+from pci.rag import (
+    async_delete_document,
+    async_query_answer,
+    async_query_data,
+    async_reindex_all_documents,
+    build_search_results,
+    filter_query_data_by_source_type,
+    rag_settings,
+)
 
 app = typer.Typer(help="Personal Content Index")
 console = Console()
+LIGHTRAG_MODES = "naive, local, global, hybrid, mix"
+SEMANTIC_FILTER_FETCH_MULTIPLIER = 5
+SEMANTIC_FILTER_FETCH_MINIMUM = 20
 
 
 def ensure_db_ready() -> None:
@@ -54,6 +65,12 @@ def status_label(is_read: int) -> str:
     return "read" if is_read else "unread"
 
 
+def semantic_search_fetch_limit(limit: int, source_type: Optional[str]) -> int:
+    if not source_type:
+        return limit
+    return max(limit * SEMANTIC_FILTER_FETCH_MULTIPLIER, SEMANTIC_FILTER_FETCH_MINIMUM)
+
+
 def open_document_url(doc: dict | object, mark_as_read_after_open: bool = False) -> None:
     url = doc["url"]
     webbrowser.open(url)
@@ -72,7 +89,7 @@ def init():
 
 @app.command()
 def add(source: str):
-    """Add a new URL (Article or YouTube video) or a local file (.pdf, .md, .txt) to the index."""
+    """Add a new URL or local file and index it with LightRAG."""
     ensure_db_ready()
 
     if os.path.exists(source) and os.path.isfile(source):
@@ -82,10 +99,111 @@ def add(source: str):
 
 
 @app.command()
+def doctor():
+    """Show active model/provider configuration from the current environment."""
+    db_path = os.environ.get("PCI_DB_PATH", "pci.db")
+    embed = embedding_settings()
+    rag = rag_settings()
+
+    table = Table(title="PCI Doctor")
+    table.add_column("Setting", style="cyan", no_wrap=True)
+    table.add_column("Value", style="green")
+
+    table.add_row("Database path", db_path)
+    table.add_row("Database exists", "yes" if os.path.exists(db_path) else "no")
+    table.add_row("LightRAG working dir", rag["working_dir"])
+    table.add_row("LightRAG index model", rag["index_model"])
+    table.add_row("LightRAG query model", rag["query_model"])
+    table.add_row("Anthropic API key present", rag["anthropic_api_key_present"])
+    table.add_row("Reindex state path", rag["reindex_state_path"])
+    table.add_row("Reindex completed docs", rag["resume_completed_count"])
+    table.add_row("Reindex last completed id", rag["resume_last_completed_id"])
+    table.add_row("Embedding provider", str(embed["provider"]))
+    table.add_row("Embedding model", str(embed["model"]))
+    table.add_row("Embedding base URL", str(embed["base_url"]))
+    table.add_row("OpenRouter API key present", str(embed["api_key_present"]))
+    table.add_row("OpenRouter site URL", str(embed["site_url"] or "-"))
+    table.add_row("OpenRouter site name", str(embed["site_name"] or "-"))
+
+    console.print(table)
+
+
+@app.command()
+def reindex(
+    reset: bool = typer.Option(True, "--reset/--no-reset", help="Reset the LightRAG working directory before rebuilding."),
+    resume: bool = typer.Option(True, "--resume/--no-resume", help="Skip documents already marked complete in the reindex state file."),
+):
+    """Rebuild the LightRAG index from the current SQLite documents."""
+    ensure_db_ready()
+    console.print("[cyan]Rebuilding LightRAG index from SQLite documents...[/cyan]")
+    if reset:
+        console.print(f"[dim]Resetting LightRAG directory: {os.environ.get('PCI_LIGHTRAG_DIR', '.pci_lightrag')}[/dim]")
+    elif resume:
+        console.print("[dim]Resume mode enabled: already completed documents will be skipped.[/dim]")
+    try:
+        result = asyncio.run(async_reindex_all_documents(reset=reset, resume=resume))
+    except Exception as e:
+        console.print(f"[red]Error during reindex: {e}[/red]")
+        raise typer.Exit(code=1)
+
+    console.print(
+        f"[green]Reindex complete.[/green] Indexed {result['indexed']} document(s), skipped {result['skipped']}, total {result['total']}."
+    )
+
+
+@app.command()
+def ask(
+    query: str,
+    mode: str = typer.Option("mix", help=f"LightRAG retrieval mode: {LIGHTRAG_MODES}"),
+    limit: int = typer.Option(5, "--limit", min=1, help="Maximum number of retrieval results to use."),
+    response_type: str = typer.Option("Multiple Paragraphs", "--response-type", help="Requested LightRAG answer format."),
+    references: bool = typer.Option(False, "--references", help="Show retrieved references after the answer."),
+):
+    """Ask LightRAG a question and get a paragraph-form answer."""
+    ensure_db_ready()
+    console.print(f"[cyan]Asking: '{query}'[/cyan]")
+    console.print(f"[dim]LightRAG mode: {mode}[/dim]")
+
+    try:
+        result = asyncio.run(
+            async_query_answer(
+                query,
+                mode=mode,
+                top_k=limit,
+                chunk_top_k=max(limit, 5),
+                response_type=response_type,
+                include_references=references,
+            )
+        )
+    except Exception as e:
+        console.print(f"[red]Error during LightRAG answer generation: {e}[/red]")
+        return
+
+    answer = (result.get("answer") or "").strip()
+    if not answer:
+        console.print("[yellow]LightRAG did not return an answer.[/yellow]")
+        return
+
+    console.print(answer)
+
+    if references:
+        refs = result.get("raw_data", {}).get("data", {}).get("references", [])
+        if refs:
+            refs_table = Table(title="References")
+            refs_table.add_column("Ref", style="cyan", no_wrap=True)
+            refs_table.add_column("Source", style="magenta")
+            for ref in refs:
+                refs_table.add_row(str(ref.get("reference_id") or "-"), truncate_text(ref.get("file_path"), 120))
+            console.print(refs_table)
+
+
+@app.command()
 def search(
     query: str,
-    semantic: bool = typer.Option(True, help="Use semantic vector search"),
+    semantic: bool = typer.Option(True, help="Use LightRAG semantic retrieval"),
     source_type: Optional[str] = typer.Option(None, "--type", help="Filter by source type: youtube, article, pdf, etc."),
+    mode: str = typer.Option("mix", help=f"LightRAG retrieval mode: {LIGHTRAG_MODES}"),
+    limit: int = typer.Option(5, "--limit", min=1, help="Maximum number of results to show."),
     open_result: bool = typer.Option(False, "--open", help="Prompt to open one of the top search results after listing."),
 ):
     """Search the index for content."""
@@ -93,15 +211,23 @@ def search(
     console.print(f"[cyan]Searching for: '{query}'[/cyan]")
 
     if semantic:
-        console.print("[dim]Generating embedding for query...[/dim]")
-        q_emb = asyncio.run(get_embedding(query))
+        console.print(f"[dim]LightRAG mode: {mode}[/dim]")
+        fetch_limit = semantic_search_fetch_limit(limit, source_type)
         try:
-            results = search_similar(q_emb, limit=5, source_type=source_type)
+            raw_data = asyncio.run(
+                async_query_data(
+                    query,
+                    mode=mode,
+                    top_k=fetch_limit,
+                    chunk_top_k=max(fetch_limit, 5),
+                )
+            )
+            results = build_search_results(raw_data, source_type=source_type)[:limit]
         except Exception as e:
-            console.print(f"[red]Error during semantic search: {e}[/red]")
+            console.print(f"[red]Error during LightRAG search: {e}[/red]")
             return
     else:
-        results = search_keyword(query, limit=5, source_type=source_type)
+        results = search_keyword(query, limit=limit, source_type=source_type)
 
     if not results:
         console.print("[yellow]No results found.[/yellow]")
@@ -109,27 +235,37 @@ def search(
 
     table = Table(title="Search Results")
     table.add_column("#", justify="right", style="white", no_wrap=True)
-    table.add_column("Score" if semantic else "ID", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Match" if semantic else "ID", justify="right", style="cyan", no_wrap=True)
     table.add_column("Title", style="magenta")
     table.add_column("Type", style="blue", no_wrap=True)
     table.add_column("Status", style="yellow", no_wrap=True)
     table.add_column("Summary", style="green")
 
-    for index, r in enumerate(results, 1):
-        score_val = f"{r['distance']:.4f}" if semantic else str(r['id'])
+    for index, result in enumerate(results, 1):
+        if semantic:
+            match_val = f"C{result['chunk_count']} E{result['entity_count']} R{result['relationship_count']}"
+            summary_text = result.get("summary") or result.get("snippet")
+            source = result.get("source_type") or "-"
+            status = status_label(result.get("is_read", 0)) if result.get("id") is not None else "-"
+        else:
+            match_val = str(result["id"])
+            summary_text = result["summary"]
+            source = result["source_type"] or "-"
+            status = status_label(result["is_read"]) if "is_read" in result.keys() else "-"
+
         table.add_row(
             str(index),
-            score_val,
-            f"{truncate_text(r['title'], 70)}\n[blue][link={r['url']}] {r['url']} [/link][/blue]",
-            r["source_type"] or "-",
-            status_label(r["is_read"]) if "is_read" in r.keys() else "-",
-            truncate_text(r["summary"], 100),
+            match_val,
+            f"{truncate_text(result['title'], 70)}\n[blue][link={result['url']}] {result['url']} [/link][/blue]",
+            source,
+            status,
+            truncate_text(summary_text, 100),
         )
 
     console.print(table)
 
     if open_result:
-        choice = typer.prompt("Open result? [1-5/n]", default="n", show_default=False).strip().lower()
+        choice = typer.prompt(f"Open result? [1-{len(results)}/n]", default="n", show_default=False).strip().lower()
         if choice != "n":
             if not choice.isdigit():
                 console.print("[red]Invalid selection.[/red]")
@@ -138,7 +274,102 @@ def search(
             if selected_index < 1 or selected_index > len(results):
                 console.print("[red]Selection out of range.[/red]")
                 return
-            open_document_url(results[selected_index - 1], mark_as_read_after_open=True)
+            selected = results[selected_index - 1]
+            if selected.get("id") is None:
+                console.print("[red]Selected LightRAG reference is not linked to a local document row.[/red]")
+                return
+            open_document_url(selected, mark_as_read_after_open=True)
+
+
+@app.command()
+def retrieve(
+    query: str,
+    mode: str = typer.Option("mix", help=f"LightRAG retrieval mode: {LIGHTRAG_MODES}"),
+    source_type: Optional[str] = typer.Option(None, "--type", help="Filter by source type: youtube, article, pdf, etc."),
+    limit: int = typer.Option(5, "--limit", min=1, help="Maximum number of chunks/entities/relationships to show."),
+):
+    """Show structured LightRAG retrieval output for a query."""
+    ensure_db_ready()
+    console.print(f"[cyan]Retrieving context for: '{query}'[/cyan]")
+    console.print(f"[dim]LightRAG mode: {mode}[/dim]")
+
+    try:
+        raw_data = asyncio.run(async_query_data(query, mode=mode, top_k=limit, chunk_top_k=max(limit, 5)))
+    except Exception as e:
+        console.print(f"[red]Error during LightRAG retrieval: {e}[/red]")
+        return
+
+    raw_data = filter_query_data_by_source_type(raw_data, source_type)
+    if raw_data.get("status") != "success":
+        console.print(f"[yellow]{raw_data.get('message', 'No retrieval results found.')}[/yellow]")
+        return
+
+    data = raw_data.get("data", {})
+    metadata = raw_data.get("metadata", {})
+
+    keywords = metadata.get("keywords", {})
+    console.print(f"[bold]Mode:[/bold] {metadata.get('query_mode') or mode}")
+    if keywords:
+        console.print(f"[bold]High-level keywords:[/bold] {', '.join(keywords.get('high_level', [])) or '-'}")
+        console.print(f"[bold]Low-level keywords:[/bold] {', '.join(keywords.get('low_level', [])) or '-'}")
+
+    references = data.get("references", [])
+    if references:
+        refs_table = Table(title="References")
+        refs_table.add_column("Ref", style="cyan", no_wrap=True)
+        refs_table.add_column("Source", style="magenta")
+        for ref in references[:limit]:
+            refs_table.add_row(str(ref.get("reference_id") or "-"), truncate_text(ref.get("file_path"), 120))
+        console.print(refs_table)
+
+    chunks = data.get("chunks", [])
+    if chunks:
+        chunk_table = Table(title="Chunks")
+        chunk_table.add_column("Ref", style="cyan", no_wrap=True)
+        chunk_table.add_column("Source", style="blue")
+        chunk_table.add_column("Content", style="green")
+        for chunk in chunks[:limit]:
+            chunk_table.add_row(
+                str(chunk.get("reference_id") or "-"),
+                truncate_text(chunk.get("file_path"), 50),
+                truncate_text(chunk.get("content"), 140),
+            )
+        console.print(chunk_table)
+
+    entities = data.get("entities", [])
+    if entities:
+        entity_table = Table(title="Entities")
+        entity_table.add_column("Ref", style="cyan", no_wrap=True)
+        entity_table.add_column("Entity", style="magenta")
+        entity_table.add_column("Type", style="blue")
+        entity_table.add_column("Description", style="green")
+        for entity in entities[:limit]:
+            entity_table.add_row(
+                str(entity.get("reference_id") or "-"),
+                truncate_text(entity.get("entity_name"), 30),
+                truncate_text(entity.get("entity_type"), 18),
+                truncate_text(entity.get("description"), 100),
+            )
+        console.print(entity_table)
+
+    relationships = data.get("relationships", [])
+    if relationships:
+        rel_table = Table(title="Relationships")
+        rel_table.add_column("Ref", style="cyan", no_wrap=True)
+        rel_table.add_column("Edge", style="magenta")
+        rel_table.add_column("Keywords", style="blue")
+        rel_table.add_column("Description", style="green")
+        for rel in relationships[:limit]:
+            rel_table.add_row(
+                str(rel.get("reference_id") or "-"),
+                f"{truncate_text(rel.get('src_id'), 20)} → {truncate_text(rel.get('tgt_id'), 20)}",
+                truncate_text(rel.get("keywords"), 30),
+                truncate_text(rel.get("description"), 100),
+            )
+        console.print(rel_table)
+
+    if not any([references, chunks, entities, relationships]):
+        console.print("[yellow]LightRAG returned no structured retrieval rows.[/yellow]")
 
 
 @app.command("list")
@@ -274,9 +505,22 @@ def delete(ids: List[int] = typer.Argument(..., help="One or more document IDs t
         return
 
     deleted_count = 0
+    blocked_ids: list[str] = []
     for doc_id in ids:
-        if delete_document(doc_id):
+        rag_deleted, rag_error = asyncio.run(async_delete_document(doc_id))
+        if not rag_deleted:
+            if rag_error:
+                console.print(f"[yellow]LightRAG warning for document {doc_id}: {rag_error}[/yellow]")
+            blocked_ids.append(str(doc_id))
+            continue
+
+        if delete_document_record(doc_id):
             deleted_count += 1
+
+    if blocked_ids:
+        console.print(
+            f"[yellow]Skipped SQLite deletion for document(s) {', '.join(blocked_ids)} because LightRAG cleanup did not succeed.[/yellow]"
+        )
 
     console.print(f"[green]Deleted {deleted_count} document(s).[/green]")
 
