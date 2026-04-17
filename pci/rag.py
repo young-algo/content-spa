@@ -238,6 +238,49 @@ def _stored_embedding_dimension() -> Optional[int]:
     return None
 
 
+async def _siliconflow_rerank(query: str, documents: list[str], top_n: int = None) -> list[dict]:
+    import aiohttp
+    import logging
+    api_key = os.environ.get("SILICON_FLOW_API_KEY")
+    if not api_key:
+        logging.warning("SILICON_FLOW_API_KEY is not set. Reranking is skipped.")
+        return []
+
+    url = "https://api.siliconflow.com/v1/rerank"
+    payload = {
+        "query": query,
+        "documents": documents,
+        "return_documents": False,
+        "model": "Qwen/Qwen3-Reranker-8B"
+    }
+    if top_n is not None:
+        payload["top_n"] = top_n
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, headers=headers) as response:
+                response.raise_for_status()
+                data = await response.json()
+                results = data.get("results", [])
+                
+                valid_results = []
+                for res in results:
+                    if "index" in res and "relevance_score" in res:
+                        valid_results.append({
+                            "index": res["index"],
+                            "relevance_score": res["relevance_score"]
+                        })
+                return valid_results
+    except Exception as e:
+        logging.warning(f"SiliconFlow reranker failed: {e}")
+        return []
+
+
 async def _create_rag(*, require_embedding_api: bool = True):
     try:
         from lightrag import LightRAG
@@ -268,12 +311,17 @@ async def _create_rag(*, require_embedding_api: bool = True):
             func=lambda texts: _noop_embed(texts, embedding_dim),
         )
 
-    rag = LightRAG(
-        working_dir=_working_dir(),
-        embedding_func=embedding_func,
-        llm_model_func=_anthropic_index_complete,
-        llm_model_name=_index_model(),
-    )
+    kwargs = {
+        "working_dir": _working_dir(),
+        "embedding_func": embedding_func,
+        "llm_model_func": _anthropic_index_complete,
+        "llm_model_name": _index_model(),
+    }
+    
+    if os.environ.get("SILICON_FLOW_API_KEY"):
+        kwargs["rerank_model_func"] = _siliconflow_rerank
+
+    rag = LightRAG(**kwargs)
     await rag.initialize_storages()
     return rag, cleanup_paths
 
@@ -445,6 +493,35 @@ async def async_query_answer(
         }
 
     return await _run_with_rag(_query)
+
+
+async def async_health_check(documents: list[dict[str, Any]]) -> str:
+    """Analyze recent document summaries and suggest further questions/areas of research."""
+    if not documents:
+        return "No recent documents to analyze."
+
+    summaries = []
+    for doc in documents:
+        doc_dict = dict(doc)
+        # Include title, source_type and summary if available
+        summary_text = doc_dict.get("summary") or doc_dict.get("content") or "No summary available."
+        summaries.append(f"- **{doc_dict.get('title', 'Untitled')}** ({doc_dict.get('source_type', 'unknown')}): {summary_text[:300]}...")
+
+    prompt = (
+        "Here are summaries of my recent readings/ingestions:\n\n"
+        + "\n".join(summaries) + "\n\n"
+        "Based on these summaries, perform a 'health check' on my knowledge base:\n"
+        "1. Identify any isolated concepts or inconsistent data that might need more context.\n"
+        "2. Suggest 3-5 specific, insightful questions or topics I should research next to bridge knowledge gaps or expand on these themes.\n"
+        "Keep it concise and actionable."
+    )
+
+    system_prompt = "You are an intelligent knowledge base assistant helping the user solidify and expand their learning."
+    
+    return await _anthropic_query_complete(
+        prompt=prompt,
+        system_prompt=system_prompt,
+    )
 
 
 async def async_reset_rag_index() -> None:

@@ -8,3 +8,6 @@ __pycache__/
 .bg-shell/
 pci/.hf_cache/
 .pci_lightrag/
+.pci_topic_clusters.json
+syntheses/
+research_downloads/
