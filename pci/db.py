@@ -287,6 +287,55 @@ def search_keyword(
     return results
 
 
+def get_random_documents(limit: int = 50) -> List[sqlite3.Row]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM documents ORDER BY RANDOM() LIMIT ?",
+        (limit,),
+    )
+    results = cursor.fetchall()
+    conn.close()
+    return results
+
+
+def get_documents_by_tag(tag: str, limit: int = 50) -> List[sqlite3.Row]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT * FROM documents
+        WHERE LOWER(tags) LIKE LOWER(?)
+        ORDER BY datetime(created_at) DESC, id DESC
+        LIMIT ?
+        """,
+        (f"%{tag}%", limit),
+    )
+    results = cursor.fetchall()
+    conn.close()
+    return results
+
+
+def get_all_tags() -> List[tuple]:
+    """Return all (id, tags) pairs where tags is not null."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, tags FROM documents WHERE tags IS NOT NULL")
+    results = cursor.fetchall()
+    conn.close()
+    return results
+
+
+def get_all_titles_and_urls() -> List[tuple]:
+    """Return all (id, title, url) tuples."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, title, url FROM documents")
+    results = cursor.fetchall()
+    conn.close()
+    return results
+
+
 def get_all_documents() -> List[sqlite3.Row]:
     conn = get_db()
     cursor = conn.cursor()

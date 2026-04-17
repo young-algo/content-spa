@@ -1,6 +1,7 @@
 import asyncio
 import csv
 import os
+import shutil
 import time
 import webbrowser
 from typing import List, Optional
@@ -15,7 +16,11 @@ load_dotenv()
 from pci.db import (
     delete_document as delete_document_record,
     get_all_documents,
+    get_all_tags,
+    get_all_titles_and_urls,
     get_document,
+    get_documents_by_tag,
+    get_random_documents,
     get_stats,
     init_db,
     list_documents,
@@ -29,6 +34,7 @@ from pci.embeddings import embedding_settings
 from pci.ingest import async_ingest_local_file, async_ingest_url
 from pci.rag import (
     async_delete_document,
+    async_health_check,
     async_query_answer,
     async_query_data,
     async_reindex_all_documents,
@@ -99,6 +105,108 @@ def add(source: str):
 
 
 @app.command()
+def ingest(
+    inbox: str = typer.Option(
+        None,
+        "--inbox",
+        help="Path to the inbox folder. Defaults to PCI_INBOX_DIR env var.",
+    ),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be ingested without actually processing."),
+):
+    """Ingest URLs and files from a shared inbox folder (e.g. Google Drive)."""
+    inbox_dir = inbox or os.environ.get("PCI_INBOX_DIR")
+    if not inbox_dir:
+        console.print("[red]No inbox path provided. Set PCI_INBOX_DIR or pass --inbox.[/red]")
+        raise typer.Exit(code=1)
+
+    if not os.path.isdir(inbox_dir):
+        console.print(f"[red]Inbox folder not found: {inbox_dir}[/red]")
+        raise typer.Exit(code=1)
+
+    ensure_db_ready()
+
+    # Collect URLs from inbox.txt
+    urls: list[str] = []
+    inbox_txt = os.path.join(inbox_dir, "inbox.txt")
+    if os.path.isfile(inbox_txt):
+        with open(inbox_txt, "r", encoding="utf-8") as f:
+            urls = [line.strip() for line in f if line.strip() and not line.strip().startswith("#")]
+
+    # Collect files
+    supported_exts = {".pdf", ".md", ".markdown", ".txt"}
+    files: list[str] = []
+    for entry in sorted(os.listdir(inbox_dir)):
+        full_path = os.path.join(inbox_dir, entry)
+        if os.path.isfile(full_path) and entry != "inbox.txt":
+            ext = os.path.splitext(entry)[1].lower()
+            if ext in supported_exts:
+                files.append(full_path)
+            else:
+                console.print(f"[yellow]Skipping unsupported file: {entry}[/yellow]")
+
+    total = len(urls) + len(files)
+    if total == 0:
+        console.print("[yellow]Inbox is empty — nothing to ingest.[/yellow]")
+        return
+
+    console.print(f"[cyan]Found {len(urls)} URL(s) and {len(files)} file(s) to ingest.[/cyan]")
+
+    if dry_run:
+        for u in urls:
+            console.print(f"  [dim]URL:[/dim] {u}")
+        for f in files:
+            console.print(f"  [dim]File:[/dim] {os.path.basename(f)}")
+        console.print("[yellow]Dry run — nothing ingested.[/yellow]")
+        return
+
+    archived_dir = os.path.join(inbox_dir, "archived")
+
+    succeeded_urls: list[str] = []
+    failed_count = 0
+
+    async def _ingest_all():
+        nonlocal failed_count
+
+        # Process URLs sequentially to avoid rate limits
+        for i, url in enumerate(urls, 1):
+            console.print(f"\n[bold blue]URL ({i}/{len(urls)}):[/bold blue] {url}")
+            try:
+                await async_ingest_url(url)
+                succeeded_urls.append(url)
+            except Exception as e:
+                console.print(f"[red]Failed: {e}[/red]")
+                failed_count += 1
+
+        # Process files sequentially
+        for i, file_path in enumerate(files, 1):
+            console.print(f"\n[bold blue]File ({i}/{len(files)}):[/bold blue] {os.path.basename(file_path)}")
+            try:
+                await async_ingest_local_file(file_path)
+                # Move to archived
+                os.makedirs(archived_dir, exist_ok=True)
+                dest = os.path.join(archived_dir, os.path.basename(file_path))
+                shutil.move(file_path, dest)
+                console.print(f"[dim]Archived → {os.path.basename(file_path)}[/dim]")
+            except Exception as e:
+                console.print(f"[red]Failed (leaving in inbox): {e}[/red]")
+                failed_count += 1
+
+    start_time = time.time()
+    asyncio.run(_ingest_all())
+
+    # Remove succeeded URLs from inbox.txt, keep failed ones
+    if os.path.isfile(inbox_txt):
+        with open(inbox_txt, "r", encoding="utf-8") as f:
+            remaining = [line for line in f if line.strip() not in succeeded_urls]
+        with open(inbox_txt, "w", encoding="utf-8") as f:
+            f.writelines(remaining)
+
+    succeeded = total - failed_count
+    elapsed = time.time() - start_time
+    console.print(f"\n[bold green]Ingest complete:[/bold green] {succeeded} succeeded, {failed_count} failed, {elapsed:.1f}s")
+
+
+@app.command()
 def doctor():
     """Show active model/provider configuration from the current environment."""
     db_path = os.environ.get("PCI_DB_PATH", "pci.db")
@@ -158,43 +266,155 @@ def ask(
     limit: int = typer.Option(5, "--limit", min=1, help="Maximum number of retrieval results to use."),
     response_type: str = typer.Option("Multiple Paragraphs", "--response-type", help="Requested LightRAG answer format."),
     references: bool = typer.Option(False, "--references", help="Show retrieved references after the answer."),
+    save_to: Optional[str] = typer.Option(None, "--save-to", help="Save the answer to a Markdown file."),
+    ingest: bool = typer.Option(False, "--ingest", help="Automatically ingest the saved Markdown file back into the database."),
 ):
     """Ask LightRAG a question and get a paragraph-form answer."""
     ensure_db_ready()
     console.print(f"[cyan]Asking: '{query}'[/cyan]")
     console.print(f"[dim]LightRAG mode: {mode}[/dim]")
 
-    try:
-        result = asyncio.run(
-            async_query_answer(
-                query,
-                mode=mode,
-                top_k=limit,
-                chunk_top_k=max(limit, 5),
-                response_type=response_type,
-                include_references=references,
-            )
+    async def _run_ask():
+        res = await async_query_answer(
+            query,
+            mode=mode,
+            top_k=limit,
+            chunk_top_k=max(limit, 5),
+            response_type=response_type,
+            include_references=references,
         )
+        ans = (res.get("answer") or "").strip()
+        if not ans:
+            console.print("[yellow]LightRAG did not return an answer.[/yellow]")
+            return
+
+        console.print(ans)
+
+        r = []
+        if references:
+            r = res.get("raw_data", {}).get("data", {}).get("references", [])
+            if r:
+                refs_table = Table(title="References")
+                refs_table.add_column("Ref", style="cyan", no_wrap=True)
+                refs_table.add_column("Source", style="magenta")
+                for ref in r:
+                    refs_table.add_row(str(ref.get("reference_id") or "-"), truncate_text(ref.get("file_path"), 120))
+                console.print(refs_table)
+
+        if save_to:
+            try:
+                with open(save_to, "w", encoding="utf-8") as f:
+                    f.write(f"# Q: {query}\n\n")
+                    f.write(ans + "\n")
+                    
+                    if references and r:
+                        f.write("\n## References\n")
+                        for ref in r:
+                            f.write(f"- [{ref.get('reference_id') or 'Ref'}] {ref.get('file_path')}\n")
+                            
+                console.print(f"[green]Saved answer to: {save_to}[/green]")
+                
+                if ingest:
+                    console.print(f"[cyan]Ingesting {save_to} back into the index...[/cyan]")
+                    await async_ingest_local_file(save_to)
+            except Exception as e:
+                console.print(f"[red]Error saving or ingesting file: {e}[/red]")
+
+    try:
+        asyncio.run(_run_ask())
     except Exception as e:
         console.print(f"[red]Error during LightRAG answer generation: {e}[/red]")
+
+
+@app.command()
+def synthesize(
+    topic: str,
+    mode: str = typer.Option("mix", help=f"LightRAG retrieval mode: {LIGHTRAG_MODES}"),
+    limit: int = typer.Option(20, "--limit", min=1, help="Maximum number of retrieval results to use."),
+    save_dir: str = typer.Option("syntheses", "--save-dir", help="Directory to save the generated markdown file."),
+    ingest: bool = typer.Option(False, "--ingest", help="Automatically ingest the generated markdown file back into the database."),
+):
+    """Synthesize a comprehensive markdown article about a topic using retrieved knowledge."""
+    ensure_db_ready()
+    console.print(f"[cyan]Synthesizing topic: '{topic}'[/cyan]")
+    console.print(f"[dim]LightRAG mode: {mode}[/dim]")
+
+    response_type = "Comprehensive Markdown Article with sections, citations referencing the provided context, and a 'Further Reading' section"
+
+    async def _run_synthesize():
+        res = await async_query_answer(
+            topic,
+            mode=mode,
+            top_k=limit,
+            chunk_top_k=max(limit, 10),
+            response_type=response_type,
+            include_references=True,
+        )
+
+        ans = (res.get("answer") or "").strip()
+        if not ans:
+            console.print("[yellow]LightRAG did not return a synthesis.[/yellow]")
+            return
+            
+        console.print("\n[bold magenta]Synthesis Generated:[/bold magenta]\n")
+        console.print(ans)
+
+        r = res.get("raw_data", {}).get("data", {}).get("references", [])
+
+        os.makedirs(save_dir, exist_ok=True)
+        filename = "".join([c if c.isalnum() else "_" for c in topic]) + ".md"
+        file_path = os.path.join(save_dir, filename)
+
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(f"# Synthesis: {topic}\n\n")
+                f.write(ans + "\n")
+                
+                if r:
+                    f.write("\n## References\n")
+                    for ref in r:
+                        f.write(f"- [{ref.get('reference_id') or 'Ref'}] {ref.get('file_path')}\n")
+                        
+            console.print(f"[green]Saved synthesized article to: {file_path}[/green]")
+            
+            if ingest:
+                console.print(f"[cyan]Ingesting {file_path} back into the index...[/cyan]")
+                await async_ingest_local_file(file_path)
+        except Exception as e:
+            console.print(f"[red]Error saving or ingesting synthesis file: {e}[/red]")
+
+    try:
+        asyncio.run(_run_synthesize())
+    except Exception as e:
+        console.print(f"[red]Error during LightRAG synthesis: {e}[/red]")
+
+
+@app.command()
+def checkup(
+    limit: int = typer.Option(50, "--limit", help="Number of items to analyze."),
+    random: bool = typer.Option(False, "--random", help="Sample random items instead of most recent."),
+):
+    """Run an LLM health check on your knowledge base to identify gaps and suggest research."""
+    ensure_db_ready()
+
+    if random:
+        console.print(f"[cyan]Sampling {limit} random items for health check...[/cyan]")
+        documents = get_random_documents(limit=limit)
+    else:
+        console.print(f"[cyan]Gathering up to {limit} recent items for health check...[/cyan]")
+        documents = list_documents(limit=limit)
+    if not documents:
+        console.print("[yellow]No documents found in the database.[/yellow]")
         return
-
-    answer = (result.get("answer") or "").strip()
-    if not answer:
-        console.print("[yellow]LightRAG did not return an answer.[/yellow]")
-        return
-
-    console.print(answer)
-
-    if references:
-        refs = result.get("raw_data", {}).get("data", {}).get("references", [])
-        if refs:
-            refs_table = Table(title="References")
-            refs_table.add_column("Ref", style="cyan", no_wrap=True)
-            refs_table.add_column("Source", style="magenta")
-            for ref in refs:
-                refs_table.add_row(str(ref.get("reference_id") or "-"), truncate_text(ref.get("file_path"), 120))
-            console.print(refs_table)
+        
+    console.print("[cyan]Analyzing knowledge base with AI...[/cyan]")
+    
+    try:
+        analysis = asyncio.run(async_health_check(documents))
+        console.print("\n[bold magenta]Knowledge Base Health Check[/bold magenta]\n")
+        console.print(analysis)
+    except Exception as e:
+        console.print(f"[red]Error during health check: {e}[/red]")
 
 
 @app.command()
@@ -444,8 +664,8 @@ def show(
         open_document_url(doc, mark_as_read_after_open=True)
 
 
-@app.command()
-def open(id: int):
+@app.command(name="open")
+def open_command(id: int):
     """Open a document in the default browser and mark it as read."""
     ensure_db_ready()
     doc = get_document(id)
@@ -559,6 +779,368 @@ def stats():
         )
     else:
         console.print("[dim]No unread items.[/dim]")
+
+
+def _collect_tag_counts(source_type: Optional[str] = None) -> list[tuple[str, int]]:
+    """Parse all tags from the database and return (tag, count) sorted by count descending."""
+    from collections import Counter
+
+    rows = get_all_tags()
+    counter: Counter[str] = Counter()
+    for row in rows:
+        doc_tags = row["tags"]
+        if not doc_tags:
+            continue
+        for tag in doc_tags.split(","):
+            tag = tag.strip().lower()
+            if tag:
+                counter[tag] += 1
+    return counter.most_common()
+
+
+@app.command()
+def topics(
+    tag: Optional[str] = typer.Argument(None, help="Show documents matching this tag or cluster name."),
+    cluster: bool = typer.Option(False, "--cluster", help="Group tags into high-level topic clusters using AI."),
+    refresh: bool = typer.Option(False, "--refresh", help="Force re-clustering (with --cluster)."),
+    source_type: Optional[str] = typer.Option(None, "--type", help="Filter by source type."),
+    limit: int = typer.Option(30, "--limit", min=1, help="Maximum number of tags or documents to show."),
+):
+    """Browse tags and topic clusters in your knowledge base."""
+    ensure_db_ready()
+
+    if cluster:
+        _topics_cluster(tag=tag, refresh=refresh, limit=limit)
+    elif tag:
+        _topics_browse_tag(tag=tag, source_type=source_type, limit=limit)
+    else:
+        _topics_list(source_type=source_type, limit=limit)
+
+
+def _topics_list(source_type: Optional[str], limit: int):
+    tag_counts = _collect_tag_counts(source_type=source_type)
+    if not tag_counts:
+        console.print("[yellow]No tags found.[/yellow]")
+        return
+
+    table = Table(title="Top Tags")
+    table.add_column("#", justify="right", style="white", no_wrap=True)
+    table.add_column("Tag", style="green")
+    table.add_column("Docs", justify="right", style="cyan")
+
+    for i, (tag, count) in enumerate(tag_counts[:limit], 1):
+        table.add_row(str(i), tag, str(count))
+
+    console.print(table)
+    console.print(f"[dim]{len(tag_counts)} unique tags total. Use 'pci topics \"tag name\"' to browse.[/dim]")
+
+
+def _topics_browse_tag(tag: str, source_type: Optional[str], limit: int):
+    documents = get_documents_by_tag(tag, limit=limit)
+    if source_type:
+        documents = [d for d in documents if (d["source_type"] or "").lower() == source_type.lower()]
+
+    if not documents:
+        console.print(f"[yellow]No documents found with tag matching '{tag}'.[/yellow]")
+        return
+
+    table = Table(title=f"Documents tagged '{tag}'")
+    table.add_column("ID", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Title", style="magenta")
+    table.add_column("Type", style="blue", no_wrap=True)
+    table.add_column("Status", style="yellow", no_wrap=True)
+    table.add_column("Date", style="white", no_wrap=True)
+
+    for doc in documents:
+        table.add_row(
+            str(doc["id"]),
+            truncate_text(doc["title"], 70),
+            doc["source_type"] or "-",
+            status_label(doc["is_read"]),
+            doc["created_at"] or "-",
+        )
+
+    console.print(table)
+
+
+def _topics_cluster(tag: Optional[str], refresh: bool, limit: int):
+    import json as _json
+    from datetime import datetime
+
+    from pci.llm import cluster_tags
+
+    cache_path = os.path.join(os.path.dirname(os.environ.get("PCI_DB_PATH", "pci.db")), ".pci_topic_clusters.json")
+
+    clusters = None
+    if not refresh and os.path.isfile(cache_path):
+        try:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                cache = _json.load(f)
+            clusters = cache.get("clusters", [])
+            console.print(f"[dim]Using cached clusters from {cache.get('created_at', 'unknown')}. Pass --refresh to rebuild.[/dim]")
+        except Exception:
+            clusters = None
+
+    if clusters is None:
+        tag_counts = _collect_tag_counts()
+        top_tags = tag_counts[:200]
+        if not top_tags:
+            console.print("[yellow]No tags to cluster.[/yellow]")
+            return
+
+        console.print(f"[cyan]Clustering {len(top_tags)} tags with AI...[/cyan]")
+        try:
+            clusters = asyncio.run(cluster_tags(top_tags))
+        except Exception as e:
+            console.print(f"[red]Clustering failed: {e}[/red]")
+            return
+
+        with open(cache_path, "w", encoding="utf-8") as f:
+            _json.dump({"created_at": datetime.now().isoformat(), "clusters": clusters}, f, indent=2)
+        console.print(f"[dim]Cached to {cache_path}[/dim]")
+
+    if tag:
+        # Find cluster by name
+        match = None
+        for c in clusters:
+            if c["name"].lower() == tag.lower():
+                match = c
+                break
+        if not match:
+            console.print(f"[yellow]No cluster named '{tag}'. Available clusters:[/yellow]")
+            for c in clusters:
+                console.print(f"  [green]{c['name']}[/green]")
+            return
+
+        # Find documents matching any tag in this cluster
+        all_docs = []
+        seen_ids = set()
+        for cluster_tag in match["tags"]:
+            for doc in get_documents_by_tag(cluster_tag, limit=200):
+                if doc["id"] not in seen_ids:
+                    seen_ids.add(doc["id"])
+                    all_docs.append(doc)
+
+        all_docs.sort(key=lambda d: d["created_at"] or "", reverse=True)
+        all_docs = all_docs[:limit]
+
+        table = Table(title=f"Cluster: {match['name']} ({len(match['tags'])} tags)")
+        table.add_column("ID", justify="right", style="cyan", no_wrap=True)
+        table.add_column("Title", style="magenta")
+        table.add_column("Type", style="blue", no_wrap=True)
+        table.add_column("Status", style="yellow", no_wrap=True)
+
+        for doc in all_docs:
+            table.add_row(
+                str(doc["id"]),
+                truncate_text(doc["title"], 70),
+                doc["source_type"] or "-",
+                status_label(doc["is_read"]),
+            )
+
+        console.print(table)
+        console.print(f"[dim]Tags in this cluster: {', '.join(match['tags'][:15])}{'...' if len(match['tags']) > 15 else ''}[/dim]")
+    else:
+        # Build tag-to-doc-count lookup
+        tag_counts = dict(_collect_tag_counts())
+
+        table = Table(title="Topic Clusters")
+        table.add_column("#", justify="right", style="white", no_wrap=True)
+        table.add_column("Topic", style="magenta")
+        table.add_column("Tags", justify="right", style="cyan", no_wrap=True)
+        table.add_column("Sample Tags", style="green")
+
+        for i, c in enumerate(clusters, 1):
+            sample = ", ".join(c["tags"][:5])
+            if len(c["tags"]) > 5:
+                sample += ", ..."
+            table.add_row(str(i), c["name"], str(len(c["tags"])), sample)
+
+        console.print(table)
+        console.print(f"[dim]Use 'pci topics --cluster \"Topic Name\"' to browse a cluster.[/dim]")
+
+
+@app.command()
+def dedupe(
+    url_only: bool = typer.Option(False, "--url-only", help="Only check URL duplicates."),
+    title_only: bool = typer.Option(False, "--title-only", help="Only check title similarity."),
+    content_only: bool = typer.Option(False, "--content-only", help="Only check content/embedding similarity."),
+    threshold: float = typer.Option(0.90, "--threshold", help="Similarity threshold for title (default 0.90) and content (default 0.95) tiers."),
+):
+    """Detect duplicate documents across URL, title, and content similarity tiers."""
+    ensure_db_ready()
+
+    run_all = not (url_only or title_only or content_only)
+    title_threshold = threshold
+    content_threshold = max(threshold, 0.95) if run_all else threshold
+
+    rows = get_all_titles_and_urls()
+    if not rows:
+        console.print("[yellow]No documents in database.[/yellow]")
+        return
+
+    if run_all or url_only:
+        _dedupe_urls(rows)
+
+    if run_all or title_only:
+        _dedupe_titles(rows, title_threshold)
+
+    if run_all or content_only:
+        _dedupe_content(rows, content_threshold)
+
+
+def _dedupe_urls(rows):
+    import re as _re
+    from collections import defaultdict
+
+    def normalize_url(url: str) -> str:
+        url = url.lower().strip()
+        url = _re.sub(r"^https?://", "", url)
+        url = url.rstrip("/")
+        url = _re.sub(r"[?&](utm_\w+|ref|source|fbclid|gclid|si)=[^&]*", "", url)
+        url = url.rstrip("?&")
+        return url
+
+    groups: dict[str, list] = defaultdict(list)
+    for row in rows:
+        norm = normalize_url(row["url"] or "")
+        groups[norm].append(row)
+
+    dupes = {k: v for k, v in groups.items() if len(v) > 1}
+
+    console.print(f"\n[bold]═══ URL Matches ({len(dupes)} group{'s' if len(dupes) != 1 else ''}) ═══[/bold]")
+    if not dupes:
+        console.print("[dim]No URL duplicates found.[/dim]")
+        return
+
+    table = Table()
+    table.add_column("Group", justify="right", style="white", no_wrap=True)
+    table.add_column("Doc ID", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Title", style="magenta")
+    table.add_column("URL", style="blue")
+
+    for i, (norm_url, docs) in enumerate(dupes.items(), 1):
+        for doc in docs:
+            table.add_row(str(i), str(doc["id"]), truncate_text(doc["title"], 50), truncate_text(doc["url"], 70))
+
+    console.print(table)
+
+
+def _dedupe_titles(rows, threshold: float):
+    from difflib import SequenceMatcher
+
+    pairs = []
+    titles = [(r["id"], (r["title"] or "").strip().lower()) for r in rows if r["title"]]
+
+    for i in range(len(titles)):
+        for j in range(i + 1, len(titles)):
+            id_a, title_a = titles[i]
+            id_b, title_b = titles[j]
+            if not title_a or not title_b:
+                continue
+            ratio = SequenceMatcher(None, title_a, title_b).ratio()
+            if ratio >= threshold:
+                pairs.append((id_a, title_a, id_b, title_b, ratio))
+
+    pairs.sort(key=lambda p: p[4], reverse=True)
+
+    console.print(f"\n[bold]═══ Similar Titles ({len(pairs)} pair{'s' if len(pairs) != 1 else ''}, threshold: {int(threshold * 100)}%) ═══[/bold]")
+    if not pairs:
+        console.print("[dim]No similar titles found.[/dim]")
+        return
+
+    table = Table()
+    table.add_column("#", justify="right", style="white", no_wrap=True)
+    table.add_column("Doc A", style="cyan")
+    table.add_column("Doc B", style="cyan")
+    table.add_column("Match", justify="right", style="green", no_wrap=True)
+
+    for i, (id_a, title_a, id_b, title_b, ratio) in enumerate(pairs[:50], 1):
+        table.add_row(
+            str(i),
+            f"#{id_a} {truncate_text(title_a, 40)}",
+            f"#{id_b} {truncate_text(title_b, 40)}",
+            f"{ratio:.0%}",
+        )
+
+    console.print(table)
+    if len(pairs) > 50:
+        console.print(f"[dim]Showing top 50 of {len(pairs)} pairs.[/dim]")
+
+
+def _dedupe_content(rows, threshold: float):
+    import struct
+
+    import numpy as np
+
+    from pci.db import get_db
+
+    console.print("\n[cyan]Loading embeddings for content comparison...[/cyan]")
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, embedding FROM vec_documents")
+    vec_rows = cursor.fetchall()
+    conn.close()
+
+    if len(vec_rows) < 2:
+        console.print("[dim]Not enough embeddings for comparison.[/dim]")
+        return
+
+    ids = []
+    embeddings = []
+    for vr in vec_rows:
+        ids.append(vr[0])
+        raw = vr[1]
+        if isinstance(raw, bytes):
+            dim = len(raw) // 4
+            emb = list(struct.unpack(f"{dim}f", raw))
+        else:
+            emb = list(raw)
+        embeddings.append(emb)
+
+    id_to_title = {r["id"]: r["title"] or "(untitled)" for r in rows}
+    matrix = np.array(embeddings, dtype=np.float32)
+    norms = np.linalg.norm(matrix, axis=1, keepdims=True)
+    norms[norms == 0] = 1
+    matrix = matrix / norms
+
+    # Compute similarity in batches to avoid memory issues
+    pairs = []
+    batch_size = 200
+    for start in range(0, len(ids), batch_size):
+        end = min(start + batch_size, len(ids))
+        batch = matrix[start:end]
+        sim = batch @ matrix.T
+        for local_i in range(end - start):
+            global_i = start + local_i
+            for j in range(global_i + 1, len(ids)):
+                if sim[local_i, j] >= threshold:
+                    pairs.append((ids[global_i], ids[j], float(sim[local_i, j])))
+
+    pairs.sort(key=lambda p: p[2], reverse=True)
+
+    console.print(f"[bold]═══ Content Overlap ({len(pairs)} pair{'s' if len(pairs) != 1 else ''}, threshold: {int(threshold * 100)}%) ═══[/bold]")
+    if not pairs:
+        console.print("[dim]No content duplicates found.[/dim]")
+        return
+
+    table = Table()
+    table.add_column("#", justify="right", style="white", no_wrap=True)
+    table.add_column("Doc A", style="cyan")
+    table.add_column("Doc B", style="cyan")
+    table.add_column("Sim", justify="right", style="green", no_wrap=True)
+
+    for i, (id_a, id_b, sim) in enumerate(pairs[:50], 1):
+        table.add_row(
+            str(i),
+            f"#{id_a} {truncate_text(id_to_title.get(id_a, '?'), 40)}",
+            f"#{id_b} {truncate_text(id_to_title.get(id_b, '?'), 40)}",
+            f"{sim:.0%}",
+        )
+
+    console.print(table)
+    if len(pairs) > 50:
+        console.print(f"[dim]Showing top 50 of {len(pairs)} pairs.[/dim]")
 
 
 @app.command()
