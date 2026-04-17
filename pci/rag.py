@@ -284,7 +284,7 @@ async def _siliconflow_rerank(query: str, documents: list[str], top_n: int = Non
 async def _create_rag(*, require_embedding_api: bool = True):
     try:
         from lightrag import LightRAG
-        from lightrag.utils import EmbeddingFunc
+        from lightrag.utils import EmbeddingFunc, Tokenizer
     except ImportError as exc:
         raise RuntimeError(
             "LightRAG is not installed. Run `uv sync` to install the lightrag-hku dependency."
@@ -317,6 +317,16 @@ async def _create_rag(*, require_embedding_api: bool = True):
         "llm_model_func": _anthropic_index_complete,
         "llm_model_name": _index_model(),
     }
+
+    if not require_embedding_api:
+        class _WhitespaceTokenizer:
+            def encode(self, content: str) -> list[int]:
+                return list(range(len(content.split())))
+
+            def decode(self, tokens: list[int]) -> str:
+                return " ".join(["token"] * len(tokens))
+
+        kwargs["tokenizer"] = Tokenizer(model_name="local-whitespace", tokenizer=_WhitespaceTokenizer())
     
     if os.environ.get("SILICON_FLOW_API_KEY"):
         kwargs["rerank_model_func"] = _siliconflow_rerank
