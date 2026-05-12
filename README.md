@@ -12,6 +12,7 @@
 - **Synthesis & Health Checks**: Generate long-form markdown articles from retrieved knowledge (`pci synthesize`) and run LLM-driven knowledge-gap reports (`pci checkup`).
 - **Topic Clustering & Deduplication**: Browse tags, cluster them into high-level topics with AI (`pci topics --cluster`), and detect duplicates across URL, title, and embedding-similarity tiers (`pci dedupe`).
 - **Read-Later Queue**: Track unread vs read items, open items in your browser, inspect details, and delete stale entries.
+- **Local Web UI**: A modern, React-based dashboard for browsing your library, managing topics, and performing semantic search directly from your browser.
 - **Local First**: All data is stored in a local SQLite database (`pci.db`), keeping your personal archive private.
 
 ## Setup
@@ -22,13 +23,21 @@
    cd content-spa
    ```
 
-2. **Install dependencies:**
+2. **Install backend dependencies:**
    The project uses `uv` for dependency management.
    ```bash
    uv sync
    ```
 
-3. **Environment setup:**
+3. **Install and build frontend (optional, for Web UI):**
+   ```bash
+   cd frontend
+   npm install
+   npm run build
+   cd ..
+   ```
+
+4. **Environment setup:**
    Create a `.env` file in the project root.
    ```env
    ANTHROPIC_API_KEY=your_api_key_here
@@ -43,6 +52,29 @@
    # Optional — enables Qwen3-Reranker-8B reranking on LightRAG retrieval
    SILICON_FLOW_API_KEY=your_siliconflow_key_here
    ```
+
+## Web UI
+
+The Content SPA now includes a local web application for a more interactive experience.
+
+1. **Build the frontend** (if you haven't already):
+   ```bash
+   cd frontend && npm install && npm run build && cd ..
+   ```
+
+2. **Start the server**:
+   ```bash
+   pci serve
+   ```
+   This will start the FastAPI backend on `http://127.0.0.1:8000` and automatically open your default browser.
+
+3. **Developer Mode**:
+   If you are making changes to the frontend, you can run the Vite dev server:
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+   *(Note: The dev server expects the backend `pci serve` to be running on port 8000 for API calls.)*
 
 ## CLI Usage
 
