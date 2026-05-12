@@ -1313,5 +1313,36 @@ def export_csv(path: str = typer.Argument("index_export.csv", help="Path to save
         console.print(f"[red]Error exporting to CSV: {e}[/red]")
 
 
+@app.command()
+def serve(
+    port: int = typer.Option(8000, help="Port to run the server on"),
+    host: str = typer.Option("127.0.0.1", help="Host to bind to"),
+    open_browser: bool = typer.Option(True, help="Open browser on start"),
+):
+    """Start the web UI server."""
+    import uvicorn
+
+    from pci.api.config import FRONTEND_DIST
+
+    console.print(f"[cyan]Starting Content Index server on http://{host}:{port}[/cyan]")
+
+    if os.path.isdir(FRONTEND_DIST):
+        console.print("[green]Serving built frontend from frontend/dist/[/green]")
+    else:
+        console.print("[yellow]No frontend build found. API-only mode.[/yellow]")
+        console.print("[yellow]Run: cd frontend && npm install && npm run build[/yellow]")
+
+    if open_browser:
+        webbrowser.open(f"http://{host}:{port}")
+
+    uvicorn.run(
+        "pci.api.app:app",
+        host=host,
+        port=port,
+        reload=False,
+        log_level="info",
+    )
+
+
 if __name__ == "__main__":
     app()

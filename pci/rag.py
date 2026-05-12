@@ -376,7 +376,9 @@ async def _refresh_document_id(doc_id: int) -> None:
 
     deleted, error = await async_delete_document(doc_id)
     if not deleted:
-        raise RuntimeError(error or f"Failed to refresh existing LightRAG document {doc_id} before reindexing.")
+        logging.warning(
+            "LightRAG delete warning for document %d: %s — continuing with insert", doc_id, error
+        )
 
 
 async def async_index_document(

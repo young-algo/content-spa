@@ -103,6 +103,7 @@ async def async_ingest_url(url: str):
 
     doc_id = await _store_and_index_document(url=url, data=data, summary=summary, tags=tags)
     console.print(f"[bold green]Successfully ingested '{data['title']}' (ID: {doc_id})[/bold green]")
+    return doc_id
 
 
 async def async_ingest_local_file(file_path: str):
@@ -139,3 +140,4 @@ async def async_ingest_local_file(file_path: str):
     file_url = f"file://{file_path}"
     doc_id = await _store_and_index_document(url=file_url, data=data, summary=summary, tags=tags)
     console.print(f"[bold green]Successfully ingested '{data['title']}' (ID: {doc_id})[/bold green]")
+    return doc_id

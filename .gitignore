@@ -9,5 +9,8 @@ __pycache__/
 pci/.hf_cache/
 .pci_lightrag/
 .pci_topic_clusters.json
-syntheses/
+docs/
 research_downloads/
+syntheses/
+frontend/node_modules/
+frontend/dist/
