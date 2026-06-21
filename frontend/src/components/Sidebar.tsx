@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   Library,
   Search,
@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { cn } from "../lib/utils";
 
+// Desktop rail destinations (Add stays a rail item on desktop — sidebar
+// structure is intentionally preserved).
 const navItems = [
   { to: "/", icon: Home, label: "Home" },
   { to: "/library", icon: Library, label: "Library" },
@@ -18,7 +20,15 @@ const navItems = [
   { to: "/topics", icon: Hash, label: "Topics" },
 ];
 
+// Mobile bottom-nav destinations — Add is promoted to a thumb-zone FAB, so the
+// bar carries 5 destinations instead of 6 (keeps labels legible and targets
+// generous on narrow phones).
+const mobileNavItems = navItems.filter((item) => item.to !== "/add");
+
 export default function Sidebar() {
+  const location = useLocation();
+  const hideFab = location.pathname === "/add";
+
   return (
     <>
       {/* Desktop Compact Sidebar Rail */}
@@ -34,13 +44,14 @@ export default function Sidebar() {
           </div>
 
           {/* Navigation */}
-          <nav className="flex flex-col gap-2 w-full px-2">
+          <nav className="flex flex-col gap-2 w-full px-2" aria-label="Primary">
             {navItems.map(({ to, icon: Icon, label }) => (
               <NavLink
                 key={to}
                 to={to}
                 end={to === "/"}
                 title={label}
+                aria-label={label}
                 className={({ isActive }) =>
                   cn(
                     "flex h-10 w-10 items-center justify-center rounded-md transition-all duration-150 relative group focus:outline-none focus:ring-1 focus:ring-primary",
@@ -68,16 +79,31 @@ export default function Sidebar() {
         </div>
       </aside>
 
+      {/* Mobile Add FAB — thumb-zone primary action, hidden on /add */}
+      {!hideFab && (
+        <NavLink
+          to="/add"
+          aria-label="Add content"
+          className="md:hidden fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 flex h-14 w-14 items-center justify-center rounded-full bg-cobalt text-pure shadow-lg shadow-cobalt/30 transition-transform duration-150 hover:bg-cobalt/90 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
+        >
+          <PlusCircle className="h-6 w-6" />
+        </NavLink>
+      )}
+
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="sidebar-dark md:hidden fixed bottom-0 left-0 right-0 min-h-16 bg-background border-t border-border flex items-center justify-around z-50 px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-        {navItems.map(({ to, icon: Icon, label }) => (
+      <nav
+        className="sidebar-dark md:hidden fixed bottom-0 left-0 right-0 min-h-16 bg-background border-t border-border flex items-center justify-around z-40 px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+        aria-label="Primary"
+      >
+        {mobileNavItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}
             end={to === "/"}
+            aria-label={label}
             className={({ isActive }) =>
               cn(
-                "flex flex-col items-center justify-center flex-1 rounded py-1 text-xs transition-all duration-150 focus:outline-none focus:ring-1 focus:ring-primary",
+                "flex flex-col items-center justify-center flex-1 rounded py-1 text-xs transition-all duration-150 focus:outline-none focus:ring-1 focus:ring-primary min-h-12",
                 isActive
                   ? "text-foreground font-medium"
                   : "text-muted-foreground hover:text-foreground",
