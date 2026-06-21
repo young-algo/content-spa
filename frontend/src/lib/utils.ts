@@ -34,33 +34,20 @@ export function formatRelativeDate(date: string | null | undefined): string {
 export function sourceTypeLabel(type: string | null | undefined): string {
   switch (type) {
     case "article":
-      return "Article";
+      return "ARTICLE";
     case "youtube":
-      return "YouTube";
+      return "YT";
     case "pdf":
       return "PDF";
     case "markdown":
-      return "Markdown";
+      return "MD";
     case "text":
-      return "Text";
+      return "TEXT";
     default:
-      return type || "Unknown";
+      return String(type || "UNKNOWN").toUpperCase();
   }
 }
 
 export function sourceTypeColor(type: string | null | undefined): string {
-  switch (type) {
-    case "article":
-      return "bg-blue-500/10 text-blue-400 border-blue-500/20";
-    case "youtube":
-      return "bg-red-500/10 text-red-400 border-red-500/20";
-    case "pdf":
-      return "bg-amber-500/10 text-amber-400 border-amber-500/20";
-    case "markdown":
-      return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-    case "text":
-      return "bg-purple-500/10 text-purple-400 border-purple-500/20";
-    default:
-      return "bg-muted text-muted-foreground border-border";
-  }
+  return "bg-paper text-ink-muted border-ink-border";
 }
