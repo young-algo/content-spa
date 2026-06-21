@@ -1,5 +1,5 @@
 import { useState, useRef, type FormEvent, type ChangeEvent } from "react";
-import { Upload, Link, Loader2, CheckCircle2 } from "lucide-react";
+import { Upload, Link as LinkIcon, Loader2 } from "lucide-react";
 import { ingestUrl, ingestFile } from "../api/system";
 import { useTask } from "../hooks/useTasks";
 import TaskProgress from "../components/TaskProgress";
@@ -40,59 +40,63 @@ export default function AddPage() {
   };
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold tracking-tight">Add Content</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Ingest a URL or upload a local file into your index
-      </p>
+    <div className="space-y-6 md:space-y-8 animate-fade-in">
+      <div className="flex flex-col gap-1.5 border-b border-ink-border pb-4">
+        <h1 className="text-xl font-bold tracking-tight text-ink">Add Content</h1>
+        <p className="text-xs text-ink-muted">Ingest a URL or upload a local file into your index.</p>
+      </div>
 
-      <div className="mt-8">
-        <h2 className="text-sm font-medium text-foreground">From URL</h2>
+      <div>
+        <h2 className="text-xs font-bold uppercase tracking-wider text-ink-muted font-mono">
+          From URL
+        </h2>
         <form onSubmit={handleUrlSubmit} className="mt-2 flex gap-2">
           <input
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://example.com/article..."
-            className="flex-1 rounded-lg border border-input bg-card px-4 py-2.5 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-1 focus:ring-ring"
+            aria-label="URL to ingest"
+            className="flex-1 rounded-lg border border-ink-border bg-pure px-4 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-muted/70 focus:border-cobalt focus:ring-1 focus:ring-primary"
           />
           <button
             type="submit"
             disabled={!url.trim() || !!taskId}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-lg bg-cobalt px-4 py-2.5 text-sm font-semibold text-pure transition-opacity hover:opacity-90 focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
           >
-            <Link className="h-4 w-4" />
+            {taskId ? <Loader2 className="h-4 w-4 animate-spin" /> : <LinkIcon className="h-4 w-4" />}
             Ingest
           </button>
         </form>
+
+        {urlTask && (
+          <div className="mt-3">
+            <TaskProgress task={urlTask} />
+          </div>
+        )}
       </div>
 
-      {urlTask && (
-        <div className="mt-3">
-          <TaskProgress task={urlTask} />
-        </div>
-      )}
-
-      <div className="mt-8">
-        <h2 className="text-sm font-medium text-foreground">From File</h2>
+      <div>
+        <h2 className="text-xs font-bold uppercase tracking-wider text-ink-muted font-mono">
+          From File
+        </h2>
         <div
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
           onClick={() => fileRef.current?.click()}
-          className={`mt-2 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 transition-colors ${
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileRef.current?.click(); } }}
+          className={`mt-2 flex cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed p-12 transition-colors focus:outline-none focus:ring-1 focus:ring-primary ${
             dragOver
-              ? "border-primary bg-primary/5"
-              : "border-border hover:border-muted-foreground/50"
+              ? "border-cobalt bg-cobalt-light/40"
+              : "border-ink-border hover:border-ink-muted/60 hover:bg-accent/30"
           }`}
         >
-          <Upload className="h-8 w-8 text-muted-foreground" />
-          <p className="mt-3 text-sm text-muted-foreground">
-            Drop a file here or click to browse
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            PDF, Markdown, or plain text
-          </p>
+          <Upload className="h-8 w-8 text-ink-muted" />
+          <p className="mt-3 text-sm text-ink">Drop a file here or click to browse</p>
+          <p className="mt-1 text-xs text-ink-muted">PDF, Markdown, or plain text</p>
           <input
             ref={fileRef}
             type="file"
@@ -101,13 +105,13 @@ export default function AddPage() {
             className="hidden"
           />
         </div>
-      </div>
 
-      {fileTask && (
-        <div className="mt-3">
-          <TaskProgress task={fileTask} />
-        </div>
-      )}
+        {fileTask && (
+          <div className="mt-3">
+            <TaskProgress task={fileTask} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

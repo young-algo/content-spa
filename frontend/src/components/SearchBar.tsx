@@ -23,7 +23,7 @@ export default function SearchBar({
 
   useEffect(() => {
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
-      if (e.key === "/" && document.activeElement !== inputRef.current) {
+      if (e.key === "/" && document.activeElement !== inputRef.current && !document.body.hasAttribute("data-overlay-open")) {
         e.preventDefault();
         inputRef.current?.focus();
       }
@@ -44,7 +44,7 @@ export default function SearchBar({
 
   return (
     <div className={cn("relative", className)}>
-      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
       <input
         ref={inputRef}
         type="text"
@@ -53,19 +53,22 @@ export default function SearchBar({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         autoFocus={autoFocus}
-        className="w-full rounded-lg border border-input bg-card py-2.5 pl-10 pr-10 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-1 focus:ring-ring"
+        aria-label="Search"
+        className="w-full rounded-lg border border-ink-border bg-pure py-2.5 pl-10 pr-10 text-sm text-ink outline-none transition-colors placeholder:text-ink-muted/70 focus:border-cobalt focus:ring-1 focus:ring-primary"
       />
-      {value && (
+      {value ? (
         <button
           onClick={() => onChange("")}
-          className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 rounded text-muted-foreground hover:text-foreground"
+          aria-label="Clear search"
+          className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 rounded text-ink-muted transition-colors hover:text-ink focus:outline-none focus:ring-1 focus:ring-primary"
         >
           <X className="h-4 w-4" />
         </button>
+      ) : (
+        <kbd className="absolute right-3 top-1/2 -translate-y-1/2 rounded border border-ink-border bg-pure px-1.5 py-0.5 text-[10px] font-mono text-ink-muted">
+          /
+        </kbd>
       )}
-      <kbd className="absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-        /
-      </kbd>
     </div>
   );
 }

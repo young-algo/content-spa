@@ -14,6 +14,7 @@ import { fetchDocuments, type DocumentItem } from "../api/documents";
 import { fetchTopics } from "../api/system";
 import DocumentRow from "../components/DocumentRow";
 import TagBadge from "../components/TagBadge";
+import { RowSkeleton } from "../components/Skeleton";
 import { cn, formatRelativeDate } from "../lib/utils";
 
 function slugify(value: string) {
@@ -65,22 +66,29 @@ export default function TopicDetailPage() {
   const loadingDocs = tagQueries.some((query) => query.isLoading);
 
   if (isLoading) {
-    return <div className="text-sm text-muted-foreground">Loading topic...</div>;
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <div className="h-3.5 w-24 animate-pulse rounded bg-muted" />
+        <div className="h-6 w-1/2 animate-pulse rounded bg-muted" />
+        <RowSkeleton count={3} />
+      </div>
+    );
   }
 
   if (!cluster) {
     return (
-      <div>
+      <div className="animate-fade-in">
         <Link
           to="/"
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center gap-1 text-xs text-ink-muted transition-colors hover:text-ink"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Browse
         </Link>
-        <div className="mt-8 rounded-lg border border-border bg-card p-5">
-          <h1 className="text-lg font-semibold">Topic not found</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+        <div className="mt-8 rounded-md border border-ink-border border-dashed p-6 text-center bg-paper/40">
+          <BookOpen className="mx-auto h-5 w-5 text-ink-muted" />
+          <h1 className="mt-2 text-sm font-semibold text-ink">Topic not found</h1>
+          <p className="mt-1 text-[11px] text-ink-muted">
             Refresh topic clusters from Browse, or open a tag directly in Library.
           </p>
         </div>
@@ -88,25 +96,30 @@ export default function TopicDetailPage() {
     );
   }
 
+  const sectionHeading = "text-xs font-bold uppercase tracking-wider text-ink-muted font-mono";
+
+  const actionLink =
+    "inline-flex items-center gap-2 rounded-md border border-ink-border bg-pure px-3 py-2 text-sm text-ink transition-colors hover:border-cobalt/30 hover:bg-accent/30 focus:outline-none focus:ring-1 focus:ring-primary";
+
   return (
-    <div>
+    <div className="space-y-6 animate-fade-in">
       <Link
         to="/"
-        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1 text-xs text-ink-muted transition-colors hover:text-ink"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         Browse
       </Link>
 
-      <div className="mt-4 flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight">{topicName}</h1>
+          <h1 className="text-xl font-bold tracking-tight text-ink">{topicName}</h1>
           {cluster.description && (
-            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-muted">
               {cluster.description}
             </p>
           )}
-          <p className="mt-2 text-xs text-muted-foreground">
+          <p className="mt-2 text-xs text-ink-muted">
             {documents.length} matched document{documents.length === 1 ? "" : "s"}
             {documents[0]?.created_at ? ` · newest ${formatRelativeDate(documents[0].created_at)}` : ""}
             {data?.cluster_created_at ? ` · clusters refreshed ${new Date(data.cluster_created_at).toLocaleDateString()}` : ""}
@@ -114,17 +127,15 @@ export default function TopicDetailPage() {
         </div>
 
         <button
-          onClick={() => {
-            setRefreshVersion((value) => value + 1);
-          }}
-          className="inline-flex shrink-0 items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+          onClick={() => setRefreshVersion((value) => value + 1)}
+          className="inline-flex shrink-0 items-center gap-2 rounded-md border border-ink-border bg-pure px-3 py-2 text-xs font-medium text-ink-muted transition-colors hover:bg-accent hover:text-ink focus:outline-none focus:ring-1 focus:ring-primary"
         >
           <RefreshCw className={cn("h-3.5 w-3.5", isFetching && "animate-spin")} />
           Refresh
         </button>
       </div>
 
-      <div className="mt-5 flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1.5">
         {cluster.tags.map((tag) => (
           <Link key={tag} to={`/library?tag=${encodeURIComponent(tag)}`}>
             <TagBadge tag={tag} />
@@ -132,53 +143,43 @@ export default function TopicDetailPage() {
         ))}
       </div>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Link
-          to={`/ask?topic=${encodeURIComponent(topicName)}&mode=ask`}
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm hover:border-ring/50"
-        >
-          <MessageSquare className="h-4 w-4 text-primary" />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Link to={`/ask?topic=${encodeURIComponent(topicName)}&mode=ask`} className={actionLink}>
+          <MessageSquare className="h-4 w-4 text-cobalt" />
           Ask about topic
         </Link>
-        <Link
-          to={`/ask?topic=${encodeURIComponent(topicName)}&mode=synthesize`}
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm hover:border-ring/50"
-        >
-          <Sparkles className="h-4 w-4 text-primary" />
+        <Link to={`/ask?topic=${encodeURIComponent(topicName)}&mode=synthesize`} className={actionLink}>
+          <Sparkles className="h-4 w-4 text-cobalt" />
           Synthesize topic
         </Link>
-        <Link
-          to={`/search?q=${encodeURIComponent(topicName)}`}
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm hover:border-ring/50"
-        >
-          <FileSearch className="h-4 w-4 text-primary" />
+        <Link to={`/search?q=${encodeURIComponent(topicName)}`} className={actionLink}>
+          <FileSearch className="h-4 w-4 text-cobalt" />
           Search topic
         </Link>
-        <Link
-          to={`/library?tag=${encodeURIComponent(primaryTag)}`}
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm hover:border-ring/50"
-        >
-          <Library className="h-4 w-4 text-primary" />
+        <Link to={`/library?tag=${encodeURIComponent(primaryTag)}`} className={actionLink}>
+          <Library className="h-4 w-4 text-cobalt" />
           Open in Library
         </Link>
       </div>
 
       {loadingDocs ? (
-        <div className="mt-8 text-sm text-muted-foreground">Loading documents...</div>
+        <RowSkeleton count={4} />
       ) : (
-        <div className="mt-8 space-y-8">
+        <div className="space-y-8">
           {representative.length > 0 && (
-            <section>
-              <h2 className="text-sm font-medium text-muted-foreground">Representative Documents</h2>
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <section className="space-y-3">
+              <h2 className={sectionHeading}>Representative Documents</h2>
+              <div className="grid gap-3 md:grid-cols-2">
                 {representative.map((doc) => (
                   <Link
                     key={doc.id}
                     to={`/documents/${doc.id}`}
-                    className="rounded-lg border border-border bg-card p-4 hover:border-ring/50"
+                    className="rounded-md border border-ink-border bg-pure p-4 transition-colors hover:border-cobalt/30 hover:bg-accent/30 focus:outline-none focus:ring-1 focus:ring-primary"
                   >
-                    <h3 className="line-clamp-2 text-sm font-medium">{doc.title || doc.url || "Untitled"}</h3>
-                    <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+                    <h3 className="line-clamp-2 text-sm font-medium text-ink">
+                      {doc.title || doc.url || "Untitled"}
+                    </h3>
+                    <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-ink-muted">
                       {doc.summary}
                     </p>
                   </Link>
@@ -188,12 +189,12 @@ export default function TopicDetailPage() {
           )}
 
           {unread.length > 0 && (
-            <section>
+            <section className="space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-medium text-muted-foreground">Unread In This Topic</h2>
-                <BookOpen className="h-4 w-4 text-muted-foreground" />
+                <h2 className={sectionHeading}>Unread In This Topic</h2>
+                <BookOpen className="h-4 w-4 text-ink-muted" />
               </div>
-              <div className="mt-3 space-y-2">
+              <div className="divide-y divide-ink-border rounded-md border border-ink-border bg-pure overflow-hidden">
                 {unread.map((doc) => (
                   <DocumentRow key={doc.id} doc={doc} />
                 ))}
@@ -201,18 +202,19 @@ export default function TopicDetailPage() {
             </section>
           )}
 
-          <section>
-            <h2 className="text-sm font-medium text-muted-foreground">Recent In This Topic</h2>
-            <div className="mt-3 space-y-2">
-              {recent.map((doc) => (
-                <DocumentRow key={doc.id} doc={doc} />
-              ))}
-              {recent.length === 0 && (
-                <p className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
-                  No matching documents found for this cluster yet.
-                </p>
-              )}
-            </div>
+          <section className="space-y-3">
+            <h2 className={sectionHeading}>Recent In This Topic</h2>
+            {recent.length > 0 ? (
+              <div className="divide-y divide-ink-border rounded-md border border-ink-border bg-pure overflow-hidden">
+                {recent.map((doc) => (
+                  <DocumentRow key={doc.id} doc={doc} />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-md border border-ink-border border-dashed p-6 text-center bg-paper/40">
+                <p className="text-xs text-ink-muted font-medium">No matching documents for this cluster yet.</p>
+              </div>
+            )}
           </section>
         </div>
       )}

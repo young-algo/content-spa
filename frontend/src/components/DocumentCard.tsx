@@ -29,18 +29,18 @@ export default function DocumentCard({ doc, className }: DocumentCardProps) {
       onClick={openDocument}
       onKeyDown={handleKeyDown}
       className={cn(
-        "block cursor-pointer rounded-lg border border-border bg-card p-4 transition-colors hover:border-ring/50 hover:bg-card/80 focus:outline-none focus:ring-1 focus:ring-ring",
+        "block cursor-pointer rounded-md border border-ink-border bg-pure p-4 transition-colors hover:border-cobalt/30 hover:bg-accent/30 focus:outline-none focus:ring-1 focus:ring-primary",
         className,
       )}
     >
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-medium leading-snug text-foreground">
+          <h3 className="text-sm font-medium leading-snug text-ink">
             {doc.title || doc.url || "Untitled"}
           </h3>
 
           {doc.summary && (
-            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink-muted">
               {doc.summary}
             </p>
           )}
@@ -48,7 +48,7 @@ export default function DocumentCard({ doc, className }: DocumentCardProps) {
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <span
               className={cn(
-                "inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium",
+                "inline-flex items-center rounded border px-1.5 py-0.5 text-[9px] font-mono font-semibold uppercase tracking-wider",
                 sourceTypeColor(doc.source_type),
               )}
             >
@@ -56,13 +56,13 @@ export default function DocumentCard({ doc, className }: DocumentCardProps) {
             </span>
 
             {doc.score !== null && doc.score !== undefined && (
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-[10px] font-mono text-ink-muted">
                 {(doc.score * 100).toFixed(0)}% match
               </span>
             )}
 
             {doc.created_at && (
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-[10px] text-ink-muted">
                 {formatRelativeDate(doc.created_at)}
               </span>
             )}
@@ -74,7 +74,7 @@ export default function DocumentCard({ doc, className }: DocumentCardProps) {
                 <TagBadge key={tag} tag={tag} size="sm" />
               ))}
               {tags.length > 5 && (
-                <span className="text-[10px] text-muted-foreground">
+                <span className="text-[10px] text-ink-muted">
                   +{tags.length - 5} more
                 </span>
               )}
@@ -88,7 +88,8 @@ export default function DocumentCard({ doc, className }: DocumentCardProps) {
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="shrink-0 rounded p-1 text-muted-foreground hover:text-foreground hover:bg-accent"
+            aria-label="Open source URL"
+            className="shrink-0 rounded p-1 text-ink-muted transition-colors hover:bg-accent hover:text-ink focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <ExternalLink className="h-3.5 w-3.5" />
           </a>

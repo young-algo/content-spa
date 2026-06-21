@@ -1,5 +1,6 @@
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ExternalLink, Trash2, CheckCircle, Circle, ArrowLeft } from "lucide-react";
+import { ExternalLink, Trash2, CheckCircle, Circle, ArrowLeft, AlertCircle, Undo2, Loader2 } from "lucide-react";
 import { useDocument, useUpdateDocument, useDeleteDocument } from "../hooks/useDocuments";
 import TagBadge from "../components/TagBadge";
 import { cn, sourceTypeLabel, sourceTypeColor, formatDate } from "../lib/utils";
@@ -11,17 +12,98 @@ export default function DocumentPage() {
   const updateDoc = useUpdateDocument();
   const deleteDoc = useDeleteDocument();
 
+  // Delayed delete with an inline Undo window — no native confirm(). The
+  // pending target id is tracked in a ref so the delete commits the document
+  // the user clicked, independent of whichever doc is in view when it fires.
+  const [deletePending, setDeletePending] = useState(false);
+  const [deleteError, setDeleteError] = useState(false);
+  const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingDeleteId = useRef<number | null>(null);
+
+  const performDelete = (targetId: number) => {
+    pendingDeleteId.current = null;
+    deleteDoc.mutate(targetId, {
+      onSuccess: () => navigate("/library"),
+      onError: () => {
+        setDeletePending(false);
+        setDeleteError(true);
+      },
+    });
+  };
+
+  // Commit any still-pending delete — only an explicit Undo cancels it. Called
+  // when leaving the page or switching to another document so the "Deleting…"
+  // banner never lies about what happened.
+  const flushPendingDelete = () => {
+    if (deleteTimer.current) {
+      clearTimeout(deleteTimer.current);
+      deleteTimer.current = null;
+    }
+    if (pendingDeleteId.current !== null) {
+      const targetId = pendingDeleteId.current;
+      pendingDeleteId.current = null;
+      deleteDoc.mutate(targetId);
+    }
+  };
+
+  // Reset the banner for each document in view, and commit a leftover pending
+  // delete from the previous one on id change / unmount.
+  useEffect(() => {
+    setDeletePending(false);
+    setDeleteError(false);
+    return () => flushPendingDelete();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  const handleDeleteClick = () => {
+    if (!doc) return;
+    pendingDeleteId.current = doc.id;
+    setDeleteError(false);
+    setDeletePending(true);
+    if (deleteTimer.current) clearTimeout(deleteTimer.current);
+    deleteTimer.current = setTimeout(() => performDelete(doc.id), 4500);
+  };
+
+  const handleUndoDelete = () => {
+    if (deleteTimer.current) clearTimeout(deleteTimer.current);
+    deleteTimer.current = null;
+    pendingDeleteId.current = null;
+    setDeletePending(false);
+  };
+
   if (isLoading) {
-    return <div className="text-sm text-muted-foreground">Loading...</div>;
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <div className="h-3.5 w-24 animate-pulse rounded bg-muted" />
+        <div className="h-6 w-2/3 animate-pulse rounded bg-muted" />
+        <div className="h-40 animate-pulse rounded-md border border-ink-border bg-paper" />
+        <div className="h-64 animate-pulse rounded-md border border-ink-border bg-paper" />
+      </div>
+    );
   }
 
   if (error || !doc) {
     return (
-      <div className="text-center">
-        <p className="text-sm text-red-400">Document not found</p>
-        <Link to="/library" className="mt-2 inline-block text-xs text-primary hover:underline">
-          ← Back to library
+      <div className="animate-fade-in">
+        <Link
+          to="/library"
+          className="inline-flex items-center gap-1 text-xs text-ink-muted transition-colors hover:text-ink"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Library
         </Link>
+        <div className="mt-8 rounded-md border border-ink-border border-dashed p-6 text-center bg-paper/40">
+          <AlertCircle className="mx-auto h-5 w-5 text-ink-muted" />
+          <p className="mt-2 text-xs text-ink-muted font-medium">Document not found.</p>
+          <p className="mt-1 text-[11px] text-ink-muted">It may have been deleted, or the link is stale.</p>
+          <Link
+            to="/library"
+            className="mt-2.5 inline-flex items-center gap-1 rounded bg-cobalt-light px-2.5 py-1 text-xs font-semibold text-cobalt transition-colors hover:bg-cobalt-light/70 focus:outline-none focus:ring-1 focus:ring-primary"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back to library
+          </Link>
+        </div>
       </div>
     );
   }
@@ -34,96 +116,128 @@ export default function DocumentPage() {
     updateDoc.mutate({ id: doc.id, data: { is_read: !doc.is_read } });
   };
 
-  const handleDelete = () => {
-    if (confirm("Delete this document? This cannot be undone.")) {
-      deleteDoc.mutate(doc.id, {
-        onSuccess: () => navigate("/library"),
-      });
-    }
-  };
-
   return (
-    <div>
+    <div className="space-y-6 animate-fade-in">
       <Link
         to="/library"
-        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1 text-xs text-ink-muted transition-colors hover:text-ink"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         Library
       </Link>
 
-      <div className="mt-4">
-        <div className="flex items-start gap-4">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-semibold text-foreground">
-              {doc.title || doc.url || "Untitled"}
-            </h1>
-
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <span
-                className={cn(
-                  "inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium",
-                  sourceTypeColor(doc.source_type),
-                )}
-              >
-                {sourceTypeLabel(doc.source_type)}
+      {(deletePending || deleteError) && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={
+            deleteError
+              ? "flex items-center justify-between gap-3 rounded-md border border-red-200 bg-red-50/40 px-4 py-2.5 animate-fade-in"
+              : "flex items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50/50 px-4 py-2.5 animate-fade-in"
+          }
+        >
+          {deleteError ? (
+            <>
+              <span className="flex items-center gap-2 text-xs text-red-700">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                Couldn't delete this document. Try again.
               </span>
-
               <button
-                onClick={handleToggleRead}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-xs font-medium transition-colors",
-                  doc.is_read
-                    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
-                    : "border-amber-500/20 bg-amber-500/10 text-amber-400",
-                )}
+                onClick={handleDeleteClick}
+                className="rounded border border-red-200 bg-pure px-2.5 py-1 text-xs font-semibold text-red-700 transition-colors hover:bg-red-50 focus:outline-none focus:ring-1 focus:ring-red-500"
               >
-                {doc.is_read ? (
-                  <>
-                    <CheckCircle className="h-3 w-3" />
-                    Read
-                  </>
-                ) : (
-                  <>
-                    <Circle className="h-3 w-3" />
-                    Unread
-                  </>
-                )}
+                Retry
               </button>
-
-              {doc.created_at && (
-                <span className="text-xs text-muted-foreground">
-                  Added {formatDate(doc.created_at)}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1">
-            {doc.url && (
-              <a
-                href={doc.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-accent"
-                title="Open in browser"
+            </>
+          ) : (
+            <>
+              <span className="flex items-center gap-2 text-xs text-amber-700">
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                Deleting “{doc.title || doc.url || "Untitled"}”…
+              </span>
+              <button
+                onClick={handleUndoDelete}
+                className="inline-flex items-center gap-1 rounded border border-amber-200 bg-pure px-2.5 py-1 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-50 focus:outline-none focus:ring-1 focus:ring-amber-500"
               >
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            )}
-            <button
-              onClick={handleDelete}
-              className="rounded-lg p-2 text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
-              title="Delete"
+                <Undo2 className="h-3.5 w-3.5" />
+                Undo
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-start gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl font-bold tracking-tight text-ink">
+            {doc.title || doc.url || "Untitled"}
+          </h1>
+
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span
+              className={cn(
+                "inline-flex items-center rounded border px-1.5 py-0.5 text-[9px] font-mono font-semibold uppercase tracking-wider",
+                sourceTypeColor(doc.source_type),
+              )}
             >
-              <Trash2 className="h-4 w-4" />
+              {sourceTypeLabel(doc.source_type)}
+            </span>
+
+            <button
+              onClick={handleToggleRead}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-[11px] font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-primary",
+                doc.is_read
+                  ? "border-emerald-200 bg-emerald-50/50 text-emerald-700"
+                  : "border-amber-200 bg-amber-50/50 text-amber-700",
+              )}
+            >
+              {doc.is_read ? (
+                <>
+                  <CheckCircle className="h-3 w-3" />
+                  Read
+                </>
+              ) : (
+                <>
+                  <Circle className="h-3 w-3" />
+                  Unread
+                </>
+              )}
             </button>
+
+            {doc.created_at && (
+              <span className="text-[11px] text-ink-muted">Added {formatDate(doc.created_at)}</span>
+            )}
           </div>
+        </div>
+
+        <div className="flex items-center gap-1">
+          {doc.url && (
+            <a
+              href={doc.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded p-2 text-ink-muted transition-colors hover:bg-accent hover:text-ink focus:outline-none focus:ring-1 focus:ring-primary"
+              title="Open in browser"
+              aria-label="Open in browser"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          )}
+          <button
+            onClick={handleDeleteClick}
+            disabled={deletePending || deleteDoc.isPending}
+            className="rounded p-2 text-ink-muted transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
+            title="Delete"
+            aria-label="Delete document"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
       {tags.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           {tags.map((tag) => (
             <Link key={tag} to={`/library?tag=${encodeURIComponent(tag)}`}>
               <TagBadge tag={tag} />
@@ -133,23 +247,23 @@ export default function DocumentPage() {
       )}
 
       {doc.summary && (
-        <div className="mt-6 rounded-lg border border-border bg-card p-4">
-          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        <div className="rounded-md border border-ink-border bg-paper p-4">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-ink-muted font-mono">
             Summary
           </h2>
-          <p className="mt-2 text-sm leading-relaxed text-foreground">{doc.summary}</p>
+          <p className="mt-2 text-sm leading-relaxed text-ink">{doc.summary}</p>
         </div>
       )}
 
       {doc.content && (
-        <div className="mt-4 rounded-lg border border-border bg-card p-4">
-          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        <div className="rounded-md border border-ink-border bg-pure p-4">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-ink-muted font-mono">
             Content
           </h2>
-          <div className="mt-2 max-h-96 overflow-y-auto">
-            <pre className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground font-sans">
+          <div className="mt-2 max-h-96 overflow-y-auto pr-2">
+            <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-ink-muted">
               {doc.content.length > 10000
-                ? doc.content.slice(0, 10000) + "\n\n... (truncated)"
+                ? doc.content.slice(0, 10000) + "\n\n… (truncated)"
                 : doc.content}
             </pre>
           </div>
@@ -157,15 +271,15 @@ export default function DocumentPage() {
       )}
 
       {doc.url && (
-        <div className="mt-4 rounded-lg border border-border bg-card p-4">
-          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            URL
+        <div className="rounded-md border border-ink-border bg-paper p-4">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-ink-muted font-mono">
+            Source URL
           </h2>
           <a
             href={doc.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-1 block text-sm text-primary hover:underline break-all"
+            className="mt-1 block break-all text-sm text-cobalt transition-colors hover:underline focus:outline-none focus:ring-1 focus:ring-primary"
           >
             {doc.url}
           </a>

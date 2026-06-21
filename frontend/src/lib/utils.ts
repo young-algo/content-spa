@@ -2,6 +2,24 @@ export function cn(...classes: (string | undefined | false | null)[]): string {
   return classes.filter(Boolean).join(" ");
 }
 
+/**
+ * Is the keyboard event aimed at something the user is typing into? Single
+ * source of truth for global-shortcut guards (Layout, SearchBar) — previously
+ * duplicated and already drifting between Layout and Home.
+ */
+export function isEditableTarget(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el) return false;
+  return (
+    el.tagName === "INPUT" ||
+    el.tagName === "TEXTAREA" ||
+    el.tagName === "SELECT" ||
+    el.isContentEditable ||
+    el.getAttribute?.("contenteditable") === "true" ||
+    el.getAttribute?.("role") === "textbox"
+  );
+}
+
 export function formatDate(date: string | null | undefined): string {
   if (!date) return "";
   const d = new Date(date);

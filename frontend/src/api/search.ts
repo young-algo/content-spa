@@ -55,10 +55,10 @@ export async function search(params: {
   return get<SearchResponse>(`/search?${searchParams.toString()}`);
 }
 
-export async function ask(req: AskRequest): Promise<LLMResponse> {
-  return post<LLMResponse>("/ask", req);
+export async function ask(req: AskRequest, signal?: AbortSignal): Promise<LLMResponse> {
+  return post<LLMResponse>("/ask", req, signal);
 }
 
-export async function synthesize(req: SynthesizeRequest): Promise<LLMResponse> {
-  return post<LLMResponse>("/synthesize", req);
+export async function synthesize(req: SynthesizeRequest, signal?: AbortSignal): Promise<LLMResponse> {
+  return post<LLMResponse>("/synthesize", req, signal);
 }
