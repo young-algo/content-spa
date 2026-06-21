@@ -1313,6 +1313,28 @@ def export_csv(path: str = typer.Argument("index_export.csv", help="Path to save
         console.print(f"[red]Error exporting to CSV: {e}[/red]")
 
 
+@app.command("export-vault")
+def export_vault_cmd(  # noqa: A002
+    vault_dir: str = typer.Argument(..., help="Path to the Obsidian vault directory"),
+    no_content: bool = typer.Option(False, "--no-content", help="Exclude full content from exported files (summary only)"),
+    type: Optional[str] = typer.Option(None, "--type", help="Filter by source type (article, youtube, pdf, etc.)"),
+    limit: Optional[int] = typer.Option(None, "--limit", help="Maximum number of documents to export"),
+) -> None:
+    """Export all indexed documents as Obsidian-compatible Markdown files with YAML frontmatter."""
+    ensure_db_ready()
+    from pci.vault import export_vault
+
+    result = export_vault(
+        vault_dir=vault_dir,
+        include_content=not no_content,
+        source_type=type,
+        limit=limit,
+    )
+    console.print(f"[bold green]✓ Exported {result['exported']} document(s) to:[/bold green] {result['output_dir']}")
+    if result["skipped"]:
+        console.print(f"[dim]  Skipped {result['skipped']} already-existing file(s)[/dim]")
+
+
 @app.command()
 def serve(
     port: int = typer.Option(8000, help="Port to run the server on"),

@@ -144,3 +144,17 @@ class ReindexResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str = "ok"
     version: str = "0.1.0"
+
+
+class VaultExportRequest(BaseModel):
+    vault_dir: str = Field(..., min_length=1, description="Absolute path to the Obsidian vault directory")
+    no_content: bool = Field(default=False, description="If true, exclude full content; include summary only")
+    source_type: Optional[str] = Field(default=None, description="Filter by source type (article, youtube, pdf, etc.)")
+    limit: Optional[int] = Field(default=None, ge=1, description="Maximum number of documents to export")
+
+
+class VaultExportResponse(BaseModel):
+    exported: int
+    skipped: int
+    vault_dir: str
+    output_dir: str

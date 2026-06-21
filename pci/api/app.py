@@ -11,6 +11,7 @@ from pci.api.routes import (
     search_router,
     ingestion_router,
     system_router,
+    vault_router,
 )
 
 
@@ -39,6 +40,7 @@ def create_app() -> FastAPI:
     app.include_router(search_router)
     app.include_router(ingestion_router)
     app.include_router(system_router)
+    app.include_router(vault_router)
 
     if _HAS_FRONTEND:
         app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIST, "assets")), name="assets")
