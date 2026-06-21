@@ -1,5 +1,6 @@
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ExternalLink, Trash2, CheckCircle, Circle, ArrowLeft, AlertCircle } from "lucide-react";
+import { ExternalLink, Trash2, CheckCircle, Circle, ArrowLeft, AlertCircle, Undo2, Loader2 } from "lucide-react";
 import { useDocument, useUpdateDocument, useDeleteDocument } from "../hooks/useDocuments";
 import TagBadge from "../components/TagBadge";
 import { cn, sourceTypeLabel, sourceTypeColor, formatDate } from "../lib/utils";
@@ -10,6 +11,41 @@ export default function DocumentPage() {
   const { data: doc, isLoading, error } = useDocument(Number(id));
   const updateDoc = useUpdateDocument();
   const deleteDoc = useDeleteDocument();
+
+  // Delayed delete with an inline Undo window — no native confirm(), and a
+  // grace period that matches the read-toggle's recovery pattern.
+  const [deletePending, setDeletePending] = useState(false);
+  const [deleteError, setDeleteError] = useState(false);
+  const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (deleteTimer.current) clearTimeout(deleteTimer.current);
+    };
+  }, []);
+
+  const performDelete = () => {
+    deleteDoc.mutate(doc!.id, {
+      onSuccess: () => navigate("/library"),
+      onError: () => {
+        setDeletePending(false);
+        setDeleteError(true);
+      },
+    });
+  };
+
+  const handleDeleteClick = () => {
+    setDeleteError(false);
+    setDeletePending(true);
+    if (deleteTimer.current) clearTimeout(deleteTimer.current);
+    deleteTimer.current = setTimeout(performDelete, 4500);
+  };
+
+  const handleUndoDelete = () => {
+    if (deleteTimer.current) clearTimeout(deleteTimer.current);
+    deleteTimer.current = null;
+    setDeletePending(false);
+  };
 
   if (isLoading) {
     return (
@@ -56,14 +92,6 @@ export default function DocumentPage() {
     updateDoc.mutate({ id: doc.id, data: { is_read: !doc.is_read } });
   };
 
-  const handleDelete = () => {
-    if (confirm("Delete this document? This cannot be undone.")) {
-      deleteDoc.mutate(doc.id, {
-        onSuccess: () => navigate("/library"),
-      });
-    }
-  };
-
   return (
     <div className="space-y-6 animate-fade-in">
       <Link
@@ -73,6 +101,47 @@ export default function DocumentPage() {
         <ArrowLeft className="h-3.5 w-3.5" />
         Library
       </Link>
+
+      {(deletePending || deleteError) && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={
+            deleteError
+              ? "flex items-center justify-between gap-3 rounded-md border border-red-200 bg-red-50/40 px-4 py-2.5 animate-fade-in"
+              : "flex items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50/50 px-4 py-2.5 animate-fade-in"
+          }
+        >
+          {deleteError ? (
+            <>
+              <span className="flex items-center gap-2 text-xs text-red-700">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                Couldn't delete this document. Try again.
+              </span>
+              <button
+                onClick={handleDeleteClick}
+                className="rounded border border-red-200 bg-pure px-2.5 py-1 text-xs font-semibold text-red-700 transition-colors hover:bg-red-50 focus:outline-none focus:ring-1 focus:ring-red-500"
+              >
+                Retry
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="flex items-center gap-2 text-xs text-amber-700">
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                Deleting “{doc.title || doc.url || "Untitled"}”…
+              </span>
+              <button
+                onClick={handleUndoDelete}
+                className="inline-flex items-center gap-1 rounded border border-amber-200 bg-pure px-2.5 py-1 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-50 focus:outline-none focus:ring-1 focus:ring-amber-500"
+              >
+                <Undo2 className="h-3.5 w-3.5" />
+                Undo
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="flex items-start gap-4">
         <div className="min-w-0 flex-1">
@@ -132,8 +201,9 @@ export default function DocumentPage() {
             </a>
           )}
           <button
-            onClick={handleDelete}
-            className="rounded p-2 text-ink-muted transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-1 focus:ring-primary"
+            onClick={handleDeleteClick}
+            disabled={deletePending || deleteDoc.isPending}
+            className="rounded p-2 text-ink-muted transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
             title="Delete"
             aria-label="Delete document"
           >

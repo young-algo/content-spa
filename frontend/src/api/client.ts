@@ -33,10 +33,11 @@ export async function get<T>(path: string): Promise<T> {
   return request<T>(path);
 }
 
-export async function post<T>(path: string, body?: unknown): Promise<T> {
+export async function post<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   return request<T>(path, {
     method: "POST",
     body: body ? JSON.stringify(body) : undefined,
+    signal,
   });
 }
 

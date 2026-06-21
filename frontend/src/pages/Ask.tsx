@@ -1,7 +1,19 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ask, synthesize, type AskRequest, type SynthesizeRequest } from "../api/search";
-import { Loader2, Send, Sparkles, AlertCircle } from "lucide-react";
+import { Loader2, Send, Sparkles, AlertCircle, RotateCw, StopCircle } from "lucide-react";
+
+/** Map a thrown error to a user-readable message. Returns null for an abort
+ *  (a superseded request), so the caller can skip surfacing it. */
+function friendlyMessage(e: unknown): string | null {
+  if (e instanceof DOMException && e.name === "AbortError") return null;
+  const status = (e as { status?: number } | null)?.status;
+  if (status === 429) return "Rate limited. Wait a moment and try again.";
+  if (status === 503 || status === 504) return "The model took too long to respond. Try again, or simplify the prompt.";
+  if (status && status >= 500) return "The server hit an error. Try again in a moment.";
+  if (status === 400) return "That request couldn't be processed. Try rephrasing.";
+  return "Couldn't complete the request. Check the connection and try again.";
+}
 
 export default function AskPage() {
   const [searchParams] = useSearchParams();
@@ -19,33 +31,43 @@ export default function AskPage() {
   const [error, setError] = useState("");
   const [mode, setMode] = useState<"ask" | "synthesize">(initialMode);
 
+  const abortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => abortRef.current?.abort(), []);
+
   const handleSubmit = async () => {
     if (!question.trim()) return;
+    // Cancel any in-flight request so rapid re-submits don't race.
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
     setError("");
     setAnswer("");
 
     try {
-      if (mode === "ask") {
-        const req: AskRequest = {
-          question: question.trim(),
-          include_references: true,
-        };
-        const res = await ask(req);
-        setAnswer(res.answer);
-      } else {
-        const req: SynthesizeRequest = {
-          topic: question.trim(),
-          response_type: "Comprehensive Markdown Article",
-        };
-        const res = await synthesize(req);
-        setAnswer(res.answer);
-      }
-    } catch (e: any) {
-      setError(e?.message || "Request failed");
+      const res =
+        mode === "ask"
+          ? await ask(
+              { question: question.trim(), include_references: true } satisfies AskRequest,
+              controller.signal,
+            )
+          : await synthesize(
+              { topic: question.trim(), response_type: "Comprehensive Markdown Article" } satisfies SynthesizeRequest,
+              controller.signal,
+            );
+      if (!controller.signal.aborted) setAnswer(res.answer);
+    } catch (e) {
+      if (controller.signal.aborted) return; // superseded by a newer submit
+      setError(friendlyMessage(e) ?? "Request failed");
     } finally {
-      setLoading(false);
+      if (abortRef.current === controller) setLoading(false);
     }
+  };
+
+  const handleStop = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setLoading(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -105,25 +127,33 @@ export default function AskPage() {
               ⌘ Enter
             </kbd>
           </p>
-          <button
-            onClick={handleSubmit}
-            disabled={loading || !question.trim()}
-            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-cobalt px-4 py-2 text-sm font-semibold text-pure transition-opacity hover:opacity-90 focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
-          >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : mode === "ask" ? (
-              <>
-                <Send className="h-4 w-4" />
-                Ask
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                Synthesize
-              </>
-            )}
-          </button>
+          {loading ? (
+            <button
+              onClick={handleStop}
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-ink-border bg-pure px-4 py-2 text-sm font-semibold text-ink-muted transition-colors hover:bg-accent hover:text-ink focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <StopCircle className="h-4 w-4" />
+              Stop
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={!question.trim()}
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-cobalt px-4 py-2 text-sm font-semibold text-pure transition-opacity hover:opacity-90 focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
+            >
+              {mode === "ask" ? (
+                <>
+                  <Send className="h-4 w-4" />
+                  Ask
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  Synthesize
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -133,14 +163,24 @@ export default function AskPage() {
           <span className="text-sm text-ink-muted">
             {mode === "ask" ? "Searching and generating answer…" : "Synthesizing article…"}
           </span>
+          <span className="ml-auto text-[11px] text-ink-muted">This can take 30-60s</span>
         </div>
       )}
 
-      {error && (
+      {error && !loading && (
         <div className="rounded-md border border-red-200 bg-red-50/30 p-4">
-          <div className="flex items-center gap-2 text-red-700">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span className="text-sm">{error}</span>
+          <div className="flex items-start gap-2 text-red-700">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm">{error}</p>
+              <button
+                onClick={handleSubmit}
+                className="mt-2 inline-flex items-center gap-1.5 rounded border border-red-200 bg-pure px-2.5 py-1 text-xs font-semibold text-red-700 transition-colors hover:bg-red-50 focus:outline-none focus:ring-1 focus:ring-red-500"
+              >
+                <RotateCw className="h-3.5 w-3.5" />
+                Retry
+              </button>
+            </div>
           </div>
         </div>
       )}

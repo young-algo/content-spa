@@ -24,27 +24,9 @@ import { fetchDocuments, type DocumentItem } from "../api/documents";
 import { fetchStats } from "../api/system";
 import { fetchTopics, type TopicCluster } from "../api/system";
 import { useUpdateDocument } from "../hooks/useDocuments";
-import { cn, formatRelativeDate } from "../lib/utils";
+import { cn, formatRelativeDate, sourceTypeLabel, sourceTypeColor } from "../lib/utils";
 
 const SOURCE_TYPES = ["article", "youtube", "pdf", "markdown", "text"] as const;
-const sourceTypeChipClass = "bg-paper text-ink-muted border-ink-border";
-
-function sourceTypeLabel(type: string | null | undefined): string {
-  switch (type) {
-    case "article":
-      return "ARTICLE";
-    case "youtube":
-      return "YT";
-    case "pdf":
-      return "PDF";
-    case "markdown":
-      return "MD";
-    case "text":
-      return "TEXT";
-    default:
-      return String(type || "UNKNOWN").toUpperCase();
-  }
-}
 
 function slugify(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -135,7 +117,7 @@ function CompactDocumentRow({ doc, isMutating, onToggleRead }: CompactDocumentRo
             <span
               className={cn(
                 "shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider font-semibold",
-                sourceTypeChipClass,
+                sourceTypeColor(doc.source_type),
               )}
             >
               {sourceTypeLabel(doc.source_type)}
@@ -264,6 +246,7 @@ export default function HomePage() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.repeat) return;
+      if (document.body.hasAttribute("data-overlay-open")) return;
       if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
 
       const target = e.target as HTMLElement | null;
@@ -332,9 +315,14 @@ export default function HomePage() {
           <div className="text-[13px] text-ink font-semibold flex-1">
             Quick Actions
           </div>
-          <span className="hidden sm:inline text-[10px] font-mono text-ink-muted">
-            Shortcuts: R S A I T
-          </span>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("ci:open-palette"))}
+            className="inline-flex items-center gap-1.5 rounded border border-ink-border bg-pure px-2 py-1 text-[10px] font-mono text-ink-muted transition-colors hover:bg-accent hover:text-ink focus:outline-none focus:ring-1 focus:ring-primary"
+            title="Open command palette"
+          >
+            <Command className="h-3 w-3" />
+            ⌘K
+          </button>
         </div>
 
         <div className="space-y-0.5">
@@ -548,7 +536,7 @@ export default function HomePage() {
                   </div>
                   <span className={cn(
                     "text-[10px] font-mono uppercase px-1.5 py-0.5 rounded border",
-                    sourceTypeChipClass
+                    sourceTypeColor(oldestUnread.source_type)
                   )}>
                     {sourceTypeLabel(oldestUnread.source_type)}
                   </span>
@@ -589,9 +577,9 @@ export default function HomePage() {
           {/* Section: Recent Additions */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-ink-muted font-mono flex items-center gap-1.5">
+              <h2 className="text-sm font-semibold text-ink flex items-center gap-1.5">
                 <FileText className="h-3.5 w-3.5 text-ink-muted" />
-                Recent Additions
+                Recent additions
               </h2>
               <Link to="/library" className="rounded px-1.5 py-0.5 text-xs font-mono text-cobalt hover:underline focus:outline-none focus:ring-1 focus:ring-primary">
                 View full library
@@ -823,7 +811,7 @@ export default function HomePage() {
                         <span
                           className={cn(
                             "rounded border px-1.5 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider",
-                            sourceTypeChipClass,
+                            sourceTypeColor(sourceType),
                           )}
                         >
                           {sourceTypeLabel(sourceType)}

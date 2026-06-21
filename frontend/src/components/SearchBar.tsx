@@ -23,7 +23,7 @@ export default function SearchBar({
 
   useEffect(() => {
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
-      if (e.key === "/" && document.activeElement !== inputRef.current) {
+      if (e.key === "/" && document.activeElement !== inputRef.current && !document.body.hasAttribute("data-overlay-open")) {
         e.preventDefault();
         inputRef.current?.focus();
       }
