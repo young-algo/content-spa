@@ -14,6 +14,7 @@ import { fetchDocuments, type DocumentItem } from "../api/documents";
 import { fetchTopics } from "../api/system";
 import DocumentRow from "../components/DocumentRow";
 import TagBadge from "../components/TagBadge";
+import { RowSkeleton } from "../components/Skeleton";
 import { cn, formatRelativeDate } from "../lib/utils";
 
 function slugify(value: string) {
@@ -24,22 +25,6 @@ function uniqueDocuments(groups: Array<DocumentItem[] | undefined>) {
   const docs = new Map<number, DocumentItem>();
   groups.flatMap((items) => items ?? []).forEach((doc) => docs.set(doc.id, doc));
   return Array.from(docs.values());
-}
-
-function RowSkeleton({ count = 3 }: { count?: number }) {
-  return (
-    <div className="divide-y divide-ink-border rounded-md border border-ink-border bg-pure overflow-hidden">
-      {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 px-3.5 py-3 animate-pulse">
-          <div className="h-4 w-4 rounded bg-muted shrink-0" />
-          <div className="flex-1 space-y-2">
-            <div className="h-3.5 w-2/3 rounded bg-muted" />
-            <div className="h-3 w-1/3 rounded bg-muted" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
 }
 
 export default function TopicDetailPage() {

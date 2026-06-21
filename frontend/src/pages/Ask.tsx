@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ask, synthesize, type AskRequest, type SynthesizeRequest } from "../api/search";
+import SegmentedControl from "../components/SegmentedControl";
 import { Loader2, Send, Sparkles, AlertCircle, RotateCw, StopCircle } from "lucide-react";
 
 /** Map a thrown error to a user-readable message. Returns null for an abort
@@ -12,7 +13,7 @@ function friendlyMessage(e: unknown): string | null {
   if (status === 503 || status === 504) return "The model took too long to respond. Try again, or simplify the prompt.";
   if (status && status >= 500) return "The server hit an error. Try again in a moment.";
   if (status === 400) return "That request couldn't be processed. Try rephrasing.";
-  return "Couldn't complete the request. Check the connection and try again.";
+  return "Couldn't complete that request.";
 }
 
 export default function AskPage() {
@@ -77,13 +78,6 @@ export default function AskPage() {
     }
   };
 
-  const filterBtn = (active: boolean) =>
-    `rounded px-4 py-2 text-sm font-medium transition-colors focus:outline-none ${
-      active
-        ? "bg-cobalt-light/60 text-cobalt font-semibold"
-        : "text-ink-muted hover:text-ink"
-    }`;
-
   return (
     <div className="space-y-6 md:space-y-8 animate-fade-in">
       <div className="flex flex-col gap-1.5 border-b border-ink-border pb-4">
@@ -93,14 +87,15 @@ export default function AskPage() {
         </p>
       </div>
 
-      <div className="flex rounded-md border border-ink-border bg-paper p-0.5 w-fit">
-        <button onClick={() => setMode("ask")} className={filterBtn(mode === "ask")}>
-          Ask a question
-        </button>
-        <button onClick={() => setMode("synthesize")} className={filterBtn(mode === "synthesize")}>
-          Synthesize article
-        </button>
-      </div>
+      <SegmentedControl
+        value={mode}
+        onChange={(v) => setMode(v as "ask" | "synthesize")}
+        options={[
+          { value: "ask", label: "Ask a question" },
+          { value: "synthesize", label: "Synthesize article" },
+        ]}
+        className="w-fit"
+      />
 
       <div>
         <textarea
@@ -122,8 +117,7 @@ export default function AskPage() {
             {mode === "ask"
               ? "Ask a question about your indexed content."
               : "Generate a comprehensive article from your knowledge base."}
-            <span className="ml-1 text-ink-border">·</span>
-            <kbd className="ml-1 rounded border border-ink-border bg-pure px-1 py-0.5 text-[10px] font-mono text-ink-muted">
+            <kbd className="ml-2 rounded border border-ink-border bg-pure px-1 py-0.5 text-[10px] font-mono text-ink-muted">
               ⌘ Enter
             </kbd>
           </p>

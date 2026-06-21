@@ -44,8 +44,12 @@ export function useUpdateDocument() {
       }));
       const previousDoc = queryClient.getQueryData(["document", id]);
 
+      // Only patch read state when the caller actually asked to change it —
+      // an undefined is_read must leave the cache untouched, not flip to unread.
+      const hasReadChange = data.is_read !== undefined;
       const nextIsRead = data.is_read ? 1 : 0;
       const patchList = (old: unknown): DocumentListResponse | unknown => {
+        if (!hasReadChange) return old;
         if (!old || !Array.isArray((old as DocumentListResponse).items)) return old;
         return {
           ...(old as DocumentListResponse),
@@ -55,9 +59,11 @@ export function useUpdateDocument() {
         };
       };
       listQueries.forEach((q) => queryClient.setQueryData(q.queryKey, patchList(q.state.data)));
-      queryClient.setQueryData(["document", id], (old: unknown) =>
-        old ? { ...(old as DocumentItem), is_read: nextIsRead } : old,
-      );
+      if (hasReadChange) {
+        queryClient.setQueryData(["document", id], (old: unknown) =>
+          old ? { ...(old as DocumentItem), is_read: nextIsRead } : old,
+        );
+      }
 
       return { previousLists, previousDoc };
     },

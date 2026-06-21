@@ -42,7 +42,7 @@ export default function TopicsPage() {
         <div className="rounded-md border border-red-200 bg-red-50/30 p-4 text-center">
           <div className="flex items-center justify-center gap-2 text-red-700">
             <AlertCircle className="h-4 w-4 shrink-0" />
-            <span className="text-xs font-semibold">Failed to load topics.</span>
+            <span className="text-xs font-semibold">Couldn't load topics.</span>
           </div>
           <button
             onClick={() => refetch()}

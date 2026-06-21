@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useSearch } from "../hooks/useSearch";
 import SearchBar from "../components/SearchBar";
 import DocumentCard from "../components/DocumentCard";
+import SegmentedControl from "../components/SegmentedControl";
 import { AlertCircle, Search as SearchIcon } from "lucide-react";
 
 const SOURCE_TYPES = ["", "article", "youtube", "pdf", "markdown", "text"];
@@ -43,28 +44,35 @@ export default function SearchPage() {
     limit: 50,
   });
 
-  /** Merge a partial update into the URL, preserving unrelated keys. */
-  const updateParams = (updates: Record<string, string | null>) => {
+  /**
+   * Merge a partial update into the URL, preserving unrelated keys. Filter
+   * toggles replace the current entry (default) so they don't flood history;
+   * only a new query submit pushes a navigable entry.
+   */
+  const updateParams = (
+    updates: Record<string, string | null>,
+    { replace = true }: { replace?: boolean } = {},
+  ) => {
     const next = new URLSearchParams(searchParams);
     Object.entries(updates).forEach(([k, v]) => {
       if (v === null || v === "") next.delete(k);
       else next.set(k, v);
     });
-    setSearchParams(next, { replace: false });
+    setSearchParams(next, { replace });
   };
 
   const handleSearch = () => {
     if (inputValue.trim()) {
-      updateParams({ q: inputValue.trim() });
+      updateParams({ q: inputValue.trim() }, { replace: false });
     }
   };
 
-  const filterBtn = (active: boolean) =>
-    `rounded px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none ${
-      active
-        ? "bg-cobalt-light/60 text-cobalt font-semibold"
-        : "text-ink-muted hover:text-ink"
-    }`;
+  // Clearing the box clears the active query so stale results don't linger and
+  // the empty-state prompt returns.
+  const handleInputChange = (value: string) => {
+    setInputValue(value);
+    if (!value && query) updateParams({ q: null });
+  };
 
   return (
     <div className="space-y-6 md:space-y-8 animate-fade-in">
@@ -77,27 +85,21 @@ export default function SearchPage() {
 
       <SearchBar
         value={inputValue}
-        onChange={setInputValue}
+        onChange={handleInputChange}
         onSearch={handleSearch}
         placeholder="Search your content… (press / to focus)"
         autoFocus
       />
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex rounded-md border border-ink-border bg-paper p-0.5">
-          <button
-            onClick={() => updateParams({ semantic: null })}
-            className={filterBtn(semantic)}
-          >
-            Semantic
-          </button>
-          <button
-            onClick={() => updateParams({ semantic: "keyword" })}
-            className={filterBtn(!semantic)}
-          >
-            Keyword
-          </button>
-        </div>
+        <SegmentedControl
+          value={semantic ? "semantic" : "keyword"}
+          onChange={(v) => updateParams({ semantic: v === "keyword" ? "keyword" : null })}
+          options={[
+            { value: "semantic", label: "Semantic" },
+            { value: "keyword", label: "Keyword" },
+          ]}
+        />
 
         <select
           value={sourceType}
@@ -127,7 +129,7 @@ export default function SearchPage() {
         <div className="rounded-md border border-red-200 bg-red-50/30 p-4">
           <div className="flex items-center gap-2 text-red-700">
             <AlertCircle className="h-4 w-4 shrink-0" />
-            <span className="text-xs font-semibold">Search failed. The index may need to be rebuilt.</span>
+            <span className="text-xs font-semibold">Couldn't run the search. The index may need to be rebuilt.</span>
           </div>
         </div>
       )}

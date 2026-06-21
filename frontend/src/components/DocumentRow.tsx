@@ -6,35 +6,47 @@ import { useUpdateDocument } from "../hooks/useDocuments";
 
 interface DocumentRowProps {
   doc: DocumentItem;
+  /**
+   * Optional controlled toggle. When provided (e.g. Home's mark-read + undo
+   * affordance), the row delegates the mutation to the caller and uses the
+   * caller's `isMutating`. Otherwise it manages the toggle itself.
+   */
+  onToggleRead?: (id: number, currentRead: boolean, title: string) => void;
+  isMutating?: boolean;
 }
 
 /**
- * Shared scan row used by Library and Topic detail. Visually aligned with the
- * CompactDocumentRow on Home — same density, same title → source/date → tags
- * order — so users move between Browse, Library, and Search without relearning
- * the hierarchy. Render inside a connected list:
+ * Shared scan row used by Library, Topic detail, and Home — same density, same
+ * title → source/date → tags order — so users move between Browse, Library, and
+ * Search without relearning the hierarchy. Render inside a connected list:
  *   <div className="divide-y divide-ink-border rounded-md border border-ink-border bg-pure overflow-hidden">
  */
-export default function DocumentRow({ doc }: DocumentRowProps) {
+export default function DocumentRow({ doc, onToggleRead, isMutating }: DocumentRowProps) {
   const updateDoc = useUpdateDocument();
-  const isMutating = updateDoc.isPending && updateDoc.variables?.id === doc.id;
+  const mutating = onToggleRead
+    ? !!isMutating
+    : updateDoc.isPending && updateDoc.variables?.id === doc.id;
   const tags = doc.tags ? doc.tags.split(",").map((t) => t.trim()).filter(Boolean) : [];
 
   const toggleRead = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    updateDoc.mutate({ id: doc.id, data: { is_read: !doc.is_read } });
+    if (onToggleRead) {
+      onToggleRead(doc.id, !!doc.is_read, doc.title || doc.url || "Untitled");
+    } else {
+      updateDoc.mutate({ id: doc.id, data: { is_read: !doc.is_read } });
+    }
   };
 
   return (
     <div className="group flex items-center gap-3 px-3.5 py-2.5 transition-colors duration-150 hover:bg-accent/40 focus-within:bg-accent/30">
       <button
         onClick={toggleRead}
-        disabled={isMutating}
+        disabled={mutating}
         aria-label={doc.is_read ? "Mark unread" : "Mark read"}
         className="shrink-0 rounded text-ink-muted transition-colors hover:text-cobalt focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
       >
-        {isMutating ? (
+        {mutating ? (
           <Loader2 className="h-4 w-4 animate-spin text-cobalt" />
         ) : doc.is_read ? (
           <CheckCircle className="h-4 w-4 text-emerald-600" />
@@ -71,7 +83,6 @@ export default function DocumentRow({ doc }: DocumentRowProps) {
             {doc.created_at && <span>{formatRelativeDate(doc.created_at)}</span>}
             {tags.length > 0 && (
               <span className="flex items-center gap-1.5 truncate">
-                <span className="text-ink-border">|</span>
                 {tags.slice(0, 3).map((tag) => (
                   <span key={tag} className="text-[10px] text-ink-muted">
                     #{tag}

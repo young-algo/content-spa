@@ -12,20 +12,17 @@ export default function DocumentPage() {
   const updateDoc = useUpdateDocument();
   const deleteDoc = useDeleteDocument();
 
-  // Delayed delete with an inline Undo window — no native confirm(), and a
-  // grace period that matches the read-toggle's recovery pattern.
+  // Delayed delete with an inline Undo window — no native confirm(). The
+  // pending target id is tracked in a ref so the delete commits the document
+  // the user clicked, independent of whichever doc is in view when it fires.
   const [deletePending, setDeletePending] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
   const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingDeleteId = useRef<number | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (deleteTimer.current) clearTimeout(deleteTimer.current);
-    };
-  }, []);
-
-  const performDelete = () => {
-    deleteDoc.mutate(doc!.id, {
+  const performDelete = (targetId: number) => {
+    pendingDeleteId.current = null;
+    deleteDoc.mutate(targetId, {
       onSuccess: () => navigate("/library"),
       onError: () => {
         setDeletePending(false);
@@ -34,16 +31,43 @@ export default function DocumentPage() {
     });
   };
 
+  // Commit any still-pending delete — only an explicit Undo cancels it. Called
+  // when leaving the page or switching to another document so the "Deleting…"
+  // banner never lies about what happened.
+  const flushPendingDelete = () => {
+    if (deleteTimer.current) {
+      clearTimeout(deleteTimer.current);
+      deleteTimer.current = null;
+    }
+    if (pendingDeleteId.current !== null) {
+      const targetId = pendingDeleteId.current;
+      pendingDeleteId.current = null;
+      deleteDoc.mutate(targetId);
+    }
+  };
+
+  // Reset the banner for each document in view, and commit a leftover pending
+  // delete from the previous one on id change / unmount.
+  useEffect(() => {
+    setDeletePending(false);
+    setDeleteError(false);
+    return () => flushPendingDelete();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
   const handleDeleteClick = () => {
+    if (!doc) return;
+    pendingDeleteId.current = doc.id;
     setDeleteError(false);
     setDeletePending(true);
     if (deleteTimer.current) clearTimeout(deleteTimer.current);
-    deleteTimer.current = setTimeout(performDelete, 4500);
+    deleteTimer.current = setTimeout(() => performDelete(doc.id), 4500);
   };
 
   const handleUndoDelete = () => {
     if (deleteTimer.current) clearTimeout(deleteTimer.current);
     deleteTimer.current = null;
+    pendingDeleteId.current = null;
     setDeletePending(false);
   };
 

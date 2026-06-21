@@ -1,6 +1,6 @@
-import { useMemo, useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   ArrowRight,
   BookOpen,
@@ -13,8 +13,6 @@ import {
   AlertCircle,
   CheckCircle,
   Loader2,
-  Circle,
-  ExternalLink,
   Command,
   Activity,
   Tag,
@@ -24,6 +22,8 @@ import { fetchDocuments, type DocumentItem } from "../api/documents";
 import { fetchStats } from "../api/system";
 import { fetchTopics, type TopicCluster } from "../api/system";
 import { useUpdateDocument } from "../hooks/useDocuments";
+import DocumentRow from "../components/DocumentRow";
+import { RowSkeleton } from "../components/Skeleton";
 import { cn, formatRelativeDate, sourceTypeLabel, sourceTypeColor } from "../lib/utils";
 
 const SOURCE_TYPES = ["article", "youtube", "pdf", "markdown", "text"] as const;
@@ -38,22 +38,6 @@ function topicPath(cluster: TopicCluster) {
 
 function getDocumentTitle(doc: Partial<DocumentItem> | null | undefined) {
   return String(doc?.title || doc?.url || "Untitled");
-}
-
-function LaneSkeleton({ count = 3 }: { count?: number }) {
-  return (
-    <div className="divide-y divide-ink-border rounded-md border border-ink-border bg-pure overflow-hidden">
-      {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 p-3.5 animate-pulse">
-          <div className="h-4 w-4 rounded bg-muted shrink-0" />
-          <div className="flex-1 space-y-2">
-            <div className="h-3.5 w-2/3 rounded bg-muted" />
-            <div className="h-3 w-1/3 rounded bg-muted" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
 }
 
 function LaneError({ message, onRetry }: { message: string; onRetry: () => void }) {
@@ -73,91 +57,7 @@ function LaneError({ message, onRetry }: { message: string; onRetry: () => void 
   );
 }
 
-interface CompactDocumentRowProps {
-  doc: DocumentItem;
-  isMutating: boolean;
-  onToggleRead: (id: number, currentRead: boolean, title: string) => void;
-}
-
-function CompactDocumentRow({ doc, isMutating, onToggleRead }: CompactDocumentRowProps) {
-  const tags = doc.tags ? doc.tags.split(",").map((t) => t.trim()).filter(Boolean) : [];
-
-  return (
-    <div className="group flex items-center gap-3 px-3.5 py-2.5 transition-colors duration-150 hover:bg-accent/40 focus-within:bg-accent/30">
-      {/* Toggle Read Button */}
-      <button
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onToggleRead(doc.id, doc.is_read === 1, doc.title || doc.url || "Untitled");
-        }}
-        disabled={isMutating}
-        className="shrink-0 rounded text-ink-muted hover:text-cobalt transition-colors focus:outline-none focus:ring-1 focus:ring-primary"
-        title={doc.is_read === 1 ? "Mark unread" : "Mark read"}
-      >
-        {isMutating ? (
-          <Loader2 className="h-4 w-4 animate-spin text-cobalt" />
-        ) : doc.is_read === 1 ? (
-          <CheckCircle className="h-4 w-4 text-emerald-600" />
-        ) : (
-          <Circle className="h-4 w-4 text-ink-muted/40 group-hover:text-ink-muted" />
-        )}
-      </button>
-
-      {/* Main Link to Document */}
-      <Link
-        to={`/documents/${doc.id}`}
-        className="min-w-0 flex-1 flex items-center justify-between gap-3 rounded focus:outline-none focus:ring-1 focus:ring-primary"
-      >
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-[13px] font-medium text-ink truncate group-hover:text-cobalt transition-colors">
-              {doc.title || doc.url || "Untitled"}
-            </span>
-            <span
-              className={cn(
-                "shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider font-semibold",
-                sourceTypeColor(doc.source_type),
-              )}
-            >
-              {sourceTypeLabel(doc.source_type)}
-            </span>
-          </div>
-
-          <div className="mt-0.5 flex items-center gap-2 text-[11px] text-ink-muted font-sans">
-            {doc.created_at && <span>{formatRelativeDate(doc.created_at)}</span>}
-            {tags.length > 0 && (
-              <span className="flex items-center gap-1.5 truncate">
-                <span className="text-ink-border">|</span>
-                {tags.slice(0, 3).map((tag) => (
-                  <span key={tag} className="text-[10px] text-ink-muted hover:text-ink transition-colors">
-                    #{tag}
-                  </span>
-                ))}
-              </span>
-            )}
-          </div>
-        </div>
-      </Link>
-
-      {/* External Link */}
-      {doc.url && (
-        <a
-          href={doc.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="shrink-0 rounded p-1 text-ink-muted hover:text-ink hover:bg-accent focus:outline-none focus:ring-1 focus:ring-primary"
-          title="Open source URL"
-        >
-          <ExternalLink className="h-3.5 w-3.5" />
-        </a>
-      )}
-    </div>
-  );
-}
-
 export default function HomePage() {
-  const navigate = useNavigate();
   const updateDoc = useUpdateDocument();
 
   const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = useQuery({
@@ -241,58 +141,6 @@ export default function HomePage() {
       }
     );
   };
-
-  // Keyboard Shortcuts for Raycast-like command console speed
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.repeat) return;
-      if (document.body.hasAttribute("data-overlay-open")) return;
-      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
-
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-
-      const isEditable =
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.tagName === "SELECT" ||
-        target.isContentEditable ||
-        target.getAttribute("contenteditable") === "true" ||
-        target.getAttribute("role") === "textbox";
-
-      const isInteractive =
-        target.tagName === "BUTTON" ||
-        target.tagName === "A" ||
-        target.closest("button") !== null ||
-        target.closest("a") !== null;
-
-      if (isEditable || isInteractive) {
-        return;
-      }
-
-      const key = e.key.toLowerCase();
-
-      if (key === "s") {
-        e.preventDefault();
-        navigate("/search");
-      } else if (key === "a") {
-        e.preventDefault();
-        navigate("/ask");
-      } else if (key === "i") {
-        e.preventDefault();
-        navigate("/add");
-      } else if (key === "t") {
-        e.preventDefault();
-        navigate("/topics");
-      } else if (key === "r" && oldestUnread) {
-        e.preventDefault();
-        navigate(`/documents/${oldestUnread.id}`);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [navigate, oldestUnread]);
 
   return (
     <div className="space-y-6 md:space-y-8 animate-fade-in">
@@ -475,7 +323,6 @@ export default function HomePage() {
                   >
                     Undo
                   </button>
-                  <span className="text-ink-border">|</span>
                   <button
                     onClick={() => setLastMarkedRead(null)}
                     className="font-mono text-ink-muted hover:text-ink focus:outline-none focus:ring-1 focus:ring-primary"
@@ -546,13 +393,13 @@ export default function HomePage() {
 
             {/* Unread List */}
             {unreadLoading ? (
-              <LaneSkeleton count={3} />
+              <RowSkeleton count={3} />
             ) : unreadError ? (
-              <LaneError message="Failed to load reading queue." onRetry={() => refetchUnread()} />
+              <LaneError message="Couldn't load the reading queue." onRetry={() => refetchUnread()} />
             ) : unreadNewest?.items && unreadNewest.items.length > 0 ? (
               <div className="divide-y divide-ink-border rounded-md border border-ink-border bg-pure overflow-hidden">
                 {unreadNewest.items.map((doc) => (
-                  <CompactDocumentRow
+                  <DocumentRow
                     key={doc.id}
                     doc={doc}
                     isMutating={updateDoc.isPending && updateDoc.variables?.id === doc.id}
@@ -587,13 +434,13 @@ export default function HomePage() {
             </div>
 
             {recentLoading ? (
-              <LaneSkeleton count={4} />
+              <RowSkeleton count={4} />
             ) : recentError ? (
-              <LaneError message="Failed to load recent additions." onRetry={() => refetchRecent()} />
+              <LaneError message="Couldn't load recent additions." onRetry={() => refetchRecent()} />
             ) : recent?.items && recent.items.length > 0 ? (
               <div className="divide-y divide-ink-border rounded-md border border-ink-border bg-pure overflow-hidden">
                 {recent.items.map((doc) => (
-                  <CompactDocumentRow
+                  <DocumentRow
                     key={doc.id}
                     doc={doc}
                     isMutating={updateDoc.isPending && updateDoc.variables?.id === doc.id}
@@ -637,7 +484,7 @@ export default function HomePage() {
               </div>
             ) : statsError ? (
               <div className="text-xs text-red-600 flex items-center gap-1 font-mono">
-                <AlertCircle className="h-3.5 w-3.5" /> Telemetry offline
+                <AlertCircle className="h-3.5 w-3.5" /> Couldn't load telemetry
               </div>
             ) : (
               <div className="space-y-2.5 text-xs font-mono">
@@ -686,9 +533,9 @@ export default function HomePage() {
             </div>
 
             {topicsLoading ? (
-              <LaneSkeleton count={2} />
+              <RowSkeleton count={2} />
             ) : topicsError ? (
-              <LaneError message="Failed to load topic clusters." onRetry={() => refetchTopics()} />
+              <LaneError message="Couldn't load topic clusters." onRetry={() => refetchTopics()} />
             ) : clusters.length > 0 ? (
               <div className="divide-y divide-ink-border rounded-md border border-ink-border bg-pure overflow-hidden">
                 {clusters.slice(0, 4).map((cluster) => {

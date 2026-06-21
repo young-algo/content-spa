@@ -2,39 +2,24 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useDocuments } from "../hooks/useDocuments";
 import DocumentRow from "../components/DocumentRow";
 import SearchBar from "../components/SearchBar";
+import SegmentedControl from "../components/SegmentedControl";
+import { RowSkeleton } from "../components/Skeleton";
 import { AlertCircle, ChevronLeft, ChevronRight, PlusCircle } from "lucide-react";
 
 const SOURCE_TYPES = ["", "article", "youtube", "pdf", "markdown", "text"];
 
-/** Parse the read filter from the URL, keeping compat with Home's ?is_read=false links. */
-function readIsRead(value: string | null): boolean | undefined {
-  if (value === "true") return true;
-  if (value === "false") return false;
-  return undefined;
-}
-
-function ListSkeleton({ count = 6 }: { count?: number }) {
-  return (
-    <div className="divide-y divide-ink-border rounded-md border border-ink-border bg-pure overflow-hidden">
-      {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 px-3.5 py-3 animate-pulse">
-          <div className="h-4 w-4 rounded bg-muted shrink-0" />
-          <div className="flex-1 space-y-2">
-            <div className="h-3.5 w-2/3 rounded bg-muted" />
-            <div className="h-3 w-1/3 rounded bg-muted" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
+type ReadFilter = "all" | "unread" | "read";
 
 export default function LibraryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Single source of truth: the URL. Refresh / share / forward preserves state.
   const sort = searchParams.get("sort") || "newest";
-  const isRead = readIsRead(searchParams.get("is_read"));
+  const readParam = searchParams.get("is_read");
+  const readValue: ReadFilter =
+    readParam === "true" ? "read" : readParam === "false" ? "unread" : "all";
+  const isRead: boolean | undefined =
+    readValue === "read" ? true : readValue === "unread" ? false : undefined;
   const sourceType = searchParams.get("source_type") || "";
   const searchText = searchParams.get("tag") || "";
   const page = Number(searchParams.get("page")) || 1;
@@ -62,13 +47,6 @@ export default function LibraryPage() {
     tag: searchText || undefined,
   });
 
-  const filterBtn = (active: boolean) =>
-    `rounded px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none ${
-      active
-        ? "bg-cobalt-light/60 text-cobalt font-semibold"
-        : "text-ink-muted hover:text-ink"
-    }`;
-
   const setPageParam = (next: number) => {
     const params = new URLSearchParams(searchParams);
     if (next <= 1) params.delete("page");
@@ -86,33 +64,27 @@ export default function LibraryPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex rounded-md border border-ink-border bg-paper p-0.5">
-          {(["newest", "oldest", "title"] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => updateParams({ sort: s === "newest" ? null : s })}
-              className={filterBtn(sort === s)}
-            >
-              {s === "newest" ? "Newest" : s === "oldest" ? "Oldest" : "Title"}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          value={sort}
+          onChange={(s) => updateParams({ sort: s === "newest" ? null : s })}
+          options={[
+            { value: "newest", label: "Newest" },
+            { value: "oldest", label: "Oldest" },
+            { value: "title", label: "Title" },
+          ]}
+        />
 
-        <div className="flex rounded-md border border-ink-border bg-paper p-0.5">
-          {([
-            { value: undefined, label: "All", param: null },
-            { value: false, label: "Unread", param: "false" },
-            { value: true, label: "Read", param: "true" },
-          ] as const).map((f) => (
-            <button
-              key={f.label}
-              onClick={() => updateParams({ is_read: f.param })}
-              className={filterBtn(isRead === f.value)}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          value={readValue}
+          onChange={(v) =>
+            updateParams({ is_read: v === "all" ? null : v === "read" ? "true" : "false" })
+          }
+          options={[
+            { value: "all", label: "All" },
+            { value: "unread", label: "Unread" },
+            { value: "read", label: "Read" },
+          ]}
+        />
 
         <select
           value={sourceType}
@@ -138,12 +110,12 @@ export default function LibraryPage() {
       </div>
 
       {isLoading ? (
-        <ListSkeleton count={6} />
+        <RowSkeleton count={6} />
       ) : isError ? (
         <div className="rounded-md border border-red-200 bg-red-50/30 p-4 text-center">
           <div className="flex items-center justify-center gap-2 text-red-700">
             <AlertCircle className="h-4 w-4 shrink-0" />
-            <span className="text-xs font-semibold">Failed to load the library.</span>
+            <span className="text-xs font-semibold">Couldn't load the library.</span>
           </div>
           <button
             onClick={() => refetch()}

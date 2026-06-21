@@ -1,23 +1,22 @@
 import { useEffect, useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import Sidebar from "./Sidebar";
 import CommandPalette from "./CommandPalette";
 import ShortcutOverlay from "./ShortcutOverlay";
-
-function isEditable(target: EventTarget | null): boolean {
-  const el = target as HTMLElement | null;
-  if (!el) return false;
-  return (
-    el.tagName === "INPUT" ||
-    el.tagName === "TEXTAREA" ||
-    el.tagName === "SELECT" ||
-    el.isContentEditable
-  );
-}
+import { fetchStats } from "../api/system";
+import type { DocumentItem } from "../api/documents";
+import { isEditableTarget } from "../lib/utils";
 
 export default function Layout() {
+  const navigate = useNavigate();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+
+  // For the global "R" (resume reading) shortcut. Shares Home's ["stats"]
+  // cache, so this is deduped rather than an extra request on every route.
+  const { data: stats } = useQuery({ queryKey: ["stats"], queryFn: fetchStats });
+  const oldestUnread = (stats?.oldest_unread as DocumentItem | null) ?? null;
 
   const overlayOpen = paletteOpen || shortcutsOpen;
 
@@ -59,15 +58,52 @@ export default function Layout() {
         return;
       }
 
-      // "?" opens the shortcut overlay when not typing.
-      if (e.key === "?" && !paletteOpen && !shortcutsOpen && !isEditable(e.target)) {
+      // Single-key shortcuts stand down while a modal is open, while typing, or
+      // when focus is inside a button/link.
+      if (paletteOpen || shortcutsOpen) return;
+      const target = e.target as HTMLElement | null;
+      if (isEditableTarget(target) || target?.closest("button") || target?.closest("a")) {
+        return;
+      }
+
+      // "?" opens the shortcut overlay (Shift is expected to type "?").
+      if (e.key === "?") {
         e.preventDefault();
         setShortcutsOpen(true);
+        return;
+      }
+
+      // Global navigation shortcuts — these live here (not on Home) so they
+      // work on every route, matching what the shortcut overlay advertises.
+      if (e.repeat || mod || e.altKey || e.shiftKey) return;
+      switch (e.key.toLowerCase()) {
+        case "s":
+          e.preventDefault();
+          navigate("/search");
+          break;
+        case "a":
+          e.preventDefault();
+          navigate("/ask");
+          break;
+        case "i":
+          e.preventDefault();
+          navigate("/add");
+          break;
+        case "t":
+          e.preventDefault();
+          navigate("/topics");
+          break;
+        case "r":
+          if (oldestUnread) {
+            e.preventDefault();
+            navigate(`/documents/${oldestUnread.id}`);
+          }
+          break;
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [paletteOpen, shortcutsOpen]);
+  }, [paletteOpen, shortcutsOpen, navigate, oldestUnread]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
