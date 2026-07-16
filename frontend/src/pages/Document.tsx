@@ -2,8 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ExternalLink, Trash2, CheckCircle, Circle, ArrowLeft, AlertCircle, Undo2, Loader2 } from "lucide-react";
 import { useDocument, useUpdateDocument, useDeleteDocument } from "../hooks/useDocuments";
+import { openDocumentSource } from "../api/documents";
 import TagBadge from "../components/TagBadge";
+import MarkdownReader from "../components/MarkdownReader";
 import { cn, sourceTypeLabel, sourceTypeColor, formatDate } from "../lib/utils";
+
+const DISPLAY_LIMIT = 30000;
+
+function browserCanOpenDirectly(url: string) {
+  return /^(https?:|mailto:)/i.test(url);
+}
 
 export default function DocumentPage() {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +25,8 @@ export default function DocumentPage() {
   // the user clicked, independent of whichever doc is in view when it fires.
   const [deletePending, setDeletePending] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
+  const [sourceOpenPending, setSourceOpenPending] = useState(false);
+  const [sourceOpenError, setSourceOpenError] = useState(false);
   const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingDeleteId = useRef<number | null>(null);
 
@@ -71,6 +81,19 @@ export default function DocumentPage() {
     setDeletePending(false);
   };
 
+  const handleOpenSource = async () => {
+    if (!doc) return;
+    setSourceOpenPending(true);
+    setSourceOpenError(false);
+    try {
+      await openDocumentSource(doc.id);
+    } catch {
+      setSourceOpenError(true);
+    } finally {
+      setSourceOpenPending(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4 animate-fade-in">
@@ -111,6 +134,11 @@ export default function DocumentPage() {
   const tags = doc.tags
     ? doc.tags.split(",").map((t) => t.trim()).filter(Boolean)
     : [];
+
+  const wordCount = doc.content ? doc.content.trim().split(/\s+/).filter(Boolean).length : 0;
+  const readingTime = Math.ceil(wordCount / 200);
+  const isTruncated = doc.content ? doc.content.length > DISPLAY_LIMIT : false;
+  const displayContent = isTruncated && doc.content ? doc.content.slice(0, DISPLAY_LIMIT) : (doc.content || "");
 
   const handleToggleRead = () => {
     updateDoc.mutate({ id: doc.id, data: { is_read: !doc.is_read } });
@@ -212,7 +240,7 @@ export default function DocumentPage() {
         </div>
 
         <div className="flex items-center gap-1">
-          {doc.url && (
+          {doc.url && browserCanOpenDirectly(doc.url) && (
             <a
               href={doc.url}
               target="_blank"
@@ -223,6 +251,17 @@ export default function DocumentPage() {
             >
               <ExternalLink className="h-4 w-4" />
             </a>
+          )}
+          {doc.url && !browserCanOpenDirectly(doc.url) && (
+            <button
+              onClick={handleOpenSource}
+              disabled={sourceOpenPending}
+              className="rounded p-2 text-ink-muted transition-colors hover:bg-accent hover:text-ink focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
+              title="Open source"
+              aria-label="Open source"
+            >
+              {sourceOpenPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
+            </button>
           )}
           <button
             onClick={handleDeleteClick}
@@ -255,18 +294,73 @@ export default function DocumentPage() {
         </div>
       )}
 
-      {doc.content && (
-        <div className="rounded-md border border-ink-border bg-pure p-4">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-ink-muted font-mono">
-            Content
-          </h2>
-          <div className="mt-2 max-h-96 overflow-y-auto pr-2">
-            <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-ink-muted">
-              {doc.content.length > 10000
-                ? doc.content.slice(0, 10000) + "\n\n… (truncated)"
-                : doc.content}
-            </pre>
+      {sourceOpenError && (
+        <div role="status" aria-live="polite" className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50/40 px-4 py-2.5 text-xs text-red-700 animate-fade-in">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          Couldn't open the source URL from the local app.
+        </div>
+      )}
+
+      {doc.content ? (
+        <div className="rounded-md border border-ink-border bg-pure overflow-hidden">
+          <div className="flex items-center justify-between border-b border-ink-border bg-paper/50 px-4 py-2.5">
+            <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-ink-muted">
+              <span>Reader</span>
+              <span className="text-ink-border">•</span>
+              <span className="font-normal normal-case text-ink-muted/80">{wordCount.toLocaleString()} words</span>
+              <span className="text-ink-border">•</span>
+              <span className="font-normal normal-case text-ink-muted/80">{readingTime} min read</span>
+            </div>
+            {isTruncated && (
+              <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-amber-700 border border-amber-200">
+                Truncated
+              </span>
+            )}
           </div>
+          <div className="p-6 md:p-8">
+            <MarkdownReader content={displayContent} />
+          </div>
+          {isTruncated && (
+            <div className="border-t border-ink-border bg-paper/50 px-6 py-4 flex items-start gap-3">
+              <AlertCircle className="mt-0.5 h-4 w-4 text-amber-600 shrink-0" />
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-ink">Document Truncated</p>
+                <p className="text-xs text-ink-muted leading-relaxed">
+                  This document exceeds the display limit of {DISPLAY_LIMIT.toLocaleString()} characters and has been truncated. 
+                  {doc.url && (
+                    <span>
+                      {" "}You can view the complete text by opening the{" "}
+                      {browserCanOpenDirectly(doc.url) ? (
+                        <a
+                          href={doc.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-cobalt hover:underline focus:outline-none focus:ring-1 focus:ring-primary inline-flex items-center gap-0.5 font-medium"
+                        >
+                          Source URL
+                        </a>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleOpenSource}
+                          disabled={sourceOpenPending}
+                          className="text-cobalt hover:underline focus:outline-none focus:ring-1 focus:ring-primary inline-flex items-center gap-0.5 font-medium disabled:opacity-50"
+                        >
+                          Source URL
+                        </button>
+                      )}.
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-md border border-ink-border border-dashed bg-paper/20 p-8 text-center">
+          <AlertCircle className="mx-auto h-5 w-5 text-ink-muted" />
+          <p className="mt-2 text-xs text-ink-muted font-medium">No content available.</p>
+          <p className="mt-1 text-[11px] text-ink-muted">This document has no text content stored in the archive.</p>
         </div>
       )}
 
@@ -275,14 +369,25 @@ export default function DocumentPage() {
           <h2 className="text-xs font-bold uppercase tracking-wider text-ink-muted font-mono">
             Source URL
           </h2>
-          <a
-            href={doc.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-1 block break-all text-sm text-cobalt transition-colors hover:underline focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            {doc.url}
-          </a>
+          {browserCanOpenDirectly(doc.url) ? (
+            <a
+              href={doc.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 block break-all text-sm text-cobalt transition-colors hover:underline focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              {doc.url}
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={handleOpenSource}
+              disabled={sourceOpenPending}
+              className="mt-1 block break-all text-left text-sm text-cobalt transition-colors hover:underline focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+            >
+              {doc.url}
+            </button>
+          )}
         </div>
       )}
     </div>

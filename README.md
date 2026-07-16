@@ -47,11 +47,19 @@
    PCI_EMBEDDING_MODEL=qwen/qwen3-embedding-8b
    PCI_LIGHTRAG_INDEX_MODEL=claude-haiku-4-5-20251001
    PCI_LIGHTRAG_QUERY_MODEL=claude-sonnet-4-6
+   OPENAI_API_KEY=your_openai_key_here
+   # Optional — override the rename model used by `pci rename` (default: gpt-5-mini)
+   # PCI_RENAME_MODEL=gpt-5-mini
    # Optional — inbox folder used by `pci ingest` (e.g. a local Google Drive path)
    PCI_INBOX_DIR=/path/to/your/inbox
    # Optional — enables Qwen3-Reranker-8B reranking on LightRAG retrieval
    SILICON_FLOW_API_KEY=your_siliconflow_key_here
    ```
+
+   The `pci rename` command requires `OPENAI_API_KEY`. It is loaded via
+   `python-dotenv` on startup, so you may set it in `.env` (alongside the other
+   keys above) OR in your shell environment — both work. The same applies to the
+   optional `PCI_RENAME_MODEL` and `OPENAI_BASE_URL` variables.
 
 ## Web UI
 
@@ -221,6 +229,30 @@ The tool is accessible via the `pci` command once installed, or via `uv run pyth
   pci dedupe --title-only --threshold 0.85
   pci dedupe --content-only --threshold 0.95
   ```
+
+### Smart File Renaming
+
+- **Rename files with generic names**
+  Uses an OpenAI chat model (default `gpt-5-mini`) to propose a meaningful,
+  kebab-case filename based on a file's content. Targets files with
+  generic-looking names such as `tmp4045.md`, `Untitled.md`, `IMG_1234.pdf`,
+  or hex-hash stems. Supported extensions: `.md`, `.markdown`, `.txt`, `.pdf`.
+  Requires `OPENAI_API_KEY` in `.env` or your shell environment.
+
+  > **Model note**: the original feature request referenced `gpt-5.4-mini`,
+  > which is not a real OpenAI model identifier. The default is `gpt-5-mini`
+  > (a real model) — pass `--model <id>` or set `PCI_RENAME_MODEL` to override.
+  ```bash
+  pci rename tmp4045.md                              # default: generic-only
+  pci rename tmp4045.md --dry-run                    # preview the proposal
+  pci rename my-detailed-notes.md --all              # force-rename non-generic
+  pci rename --dir ./inbox --recursive --yes         # walk a directory tree
+  pci rename tmp4045.md --model gpt-4o-mini          # override the default model
+  ```
+  Override the default model globally via the `PCI_RENAME_MODEL` env var, or
+  per-invocation via `--model`. Use `--dry-run` to preview, `--yes` to skip the
+  confirmation prompt, and `--all` to process every supported file (not just
+  those that look auto-generated).
 
 ### Bulk Import Commands
 

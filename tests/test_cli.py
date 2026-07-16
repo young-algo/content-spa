@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 from typer.testing import CliRunner
@@ -205,6 +206,12 @@ class TestCliCommands(unittest.TestCase):
         self.assertIn("Embedding model", result.stdout)
         self.assertIn("Reindex completed docs", result.stdout)
 
+    def test_doctor_shows_rename_settings(self):
+        result = self.runner.invoke(cli.app, ["doctor"])
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("Rename model", result.stdout)
+        self.assertIn("OpenAI API key present", result.stdout)
+
     def test_reindex_rebuilds_lightrag_from_sqlite(self):
         self.insert_sample("https://example.com/reindex", "Reindex Me", "article")
 
@@ -250,3 +257,142 @@ class TestCliCommands(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertIn("Skipped SQLite deletion", result.stdout)
         self.assertIsNotNone(db.get_document(doc_id))
+
+
+class TestRenameCommand(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.db_path = f"{self.temp_dir.name}/cli.db"
+        db.DB_PATH = self.db_path
+        cli.os.environ["PCI_DB_PATH"] = self.db_path
+        db.init_db()
+        self.runner = CliRunner()
+        self.workdir = Path(self.temp_dir.name) / "work"
+        self.workdir.mkdir()
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+
+    def test_rename_help_shows_command(self):
+        result = self.runner.invoke(cli.app, ["rename", "--help"])
+        self.assertEqual(result.exit_code, 0)
+        for flag in ["--dry-run", "--yes", "--model", "--recursive", "--all", "--dir"]:
+            self.assertIn(flag, result.stdout, f"Missing flag {flag} in help text")
+
+    def test_rename_dry_run_does_not_rename(self):
+        path = self.workdir / "tmp4045.md"
+        path.write_text("# GraphQL\n\nbody")
+
+        with patch(
+            "pci.cli.propose_filename",
+            new=AsyncMock(return_value="graphql-api-overview"),
+        ):
+            result = self.runner.invoke(cli.app, ["rename", str(path), "--dry-run", "--yes"])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue(path.exists(), "Original file should still exist in dry-run mode")
+        self.assertIn("graphql-api-overview", result.stdout)
+
+    def test_rename_executes_with_mocked_llm(self):
+        path = self.workdir / "tmp4045.md"
+        path.write_text("# GraphQL\n\nbody")
+
+        with patch(
+            "pci.cli.propose_filename",
+            new=AsyncMock(return_value="graphql-api-overview"),
+        ):
+            result = self.runner.invoke(cli.app, ["rename", str(path), "--yes"])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertFalse(path.exists(), "Original file should be gone after rename")
+        new_path = self.workdir / "graphql-api-overview.md"
+        self.assertTrue(new_path.exists(), "New renamed file should exist")
+        self.assertEqual(new_path.read_text(), "# GraphQL\n\nbody")
+
+    def test_rename_skips_non_generic_without_all_flag(self):
+        path = self.workdir / "my-detailed-notes.md"
+        path.write_text("# Notes\n\ncontent")
+
+        mock = AsyncMock(return_value="should-not-be-used")
+        with patch("pci.cli.propose_filename", new=mock):
+            result = self.runner.invoke(cli.app, ["rename", str(path), "--yes"])
+
+        self.assertEqual(result.exit_code, 0)
+        mock.assert_not_awaited()
+        self.assertTrue(path.exists(), "Non-generic file should not be renamed without --all")
+
+    def test_rename_with_all_flag_processes_non_generic(self):
+        path = self.workdir / "my-detailed-notes.md"
+        path.write_text("# Notes\n\ncontent")
+
+        mock = AsyncMock(return_value="important-design-spec")
+        with patch("pci.cli.propose_filename", new=mock):
+            result = self.runner.invoke(
+                cli.app, ["rename", str(path), "--yes", "--all", "--dry-run"]
+            )
+
+        self.assertEqual(result.exit_code, 0)
+        mock.assert_awaited()
+
+    def test_rename_conflict_appends_suffix(self):
+        tmp_path = self.workdir / "tmp4045.md"
+        tmp_path.write_text("A")
+        target_path = self.workdir / "target.md"
+        target_path.write_text("B")
+
+        with patch(
+            "pci.cli.propose_filename",
+            new=AsyncMock(return_value="target"),
+        ):
+            result = self.runner.invoke(cli.app, ["rename", str(tmp_path), "--yes"])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertFalse((self.workdir / "tmp4045.md").exists())
+        self.assertEqual((self.workdir / "target.md").read_text(), "B")
+        self.assertTrue((self.workdir / "target-1.md").exists())
+
+    def test_rename_directory_recursive(self):
+        (self.workdir / "tmp1.md").write_text("# Alpha\n\nbody alpha")
+        sub = self.workdir / "sub"
+        sub.mkdir()
+        (sub / "tmp2.txt").write_text("body beta")
+
+        mock = AsyncMock(side_effect=["alpha", "beta"])
+        with patch("pci.cli.propose_filename", new=mock):
+            result = self.runner.invoke(
+                cli.app,
+                ["rename", "--dir", str(self.workdir), "--recursive", "--yes", "--dry-run"],
+            )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertGreaterEqual(mock.await_count, 2)
+
+    def test_rename_nonexistent_path_exits_nonzero(self):
+        result = self.runner.invoke(cli.app, ["rename", "/nonexistent/zzz.md", "--yes"])
+
+        self.assertNotEqual(result.exit_code, 0)
+        combined = (result.stdout + (result.output or "")).lower()
+        self.assertIn("not found", combined)
+
+    def test_rename_uses_model_flag(self):
+        path = self.workdir / "tmp4045.md"
+        path.write_text("# GraphQL\n\nbody")
+
+        mock = AsyncMock(return_value="x")
+        with patch("pci.cli.propose_filename", new=mock):
+            result = self.runner.invoke(
+                cli.app,
+                ["rename", str(path), "--yes", "--dry-run", "--model", "gpt-4o-mini"],
+            )
+
+        self.assertEqual(result.exit_code, 0)
+        mock.assert_awaited()
+        found_model = False
+        for call in mock.await_args_list:
+            if call.kwargs.get("model") == "gpt-4o-mini":
+                found_model = True
+                break
+        self.assertTrue(
+            found_model,
+            f"Expected model='gpt-4o-mini' in propose_filename call kwargs; got {mock.await_args_list}",
+        )

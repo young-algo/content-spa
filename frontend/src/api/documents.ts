@@ -1,4 +1,4 @@
-import { get, patch, del } from "./client";
+import { get, patch, del, post } from "./client";
 
 export interface DocumentItem {
   id: number;
@@ -53,4 +53,8 @@ export async function updateDocument(id: number, data: { is_read?: boolean }): P
 
 export async function deleteDocument(id: number): Promise<void> {
   return del(`/documents/${id}`);
+}
+
+export async function openDocumentSource(id: number): Promise<void> {
+  return post<void>(`/documents/${id}/open`);
 }

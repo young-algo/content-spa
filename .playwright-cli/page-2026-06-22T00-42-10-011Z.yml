@@ -1,0 +1,975 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - generic "Content Index" [ref=e6]: CI
+      - navigation "Primary" [ref=e7]:
+        - link "Home" [ref=e8] [cursor=pointer]:
+          - /url: /
+          - img [ref=e9]
+        - link "Library" [ref=e12] [cursor=pointer]:
+          - /url: /library
+          - img [ref=e13]
+        - link "Search" [ref=e15] [cursor=pointer]:
+          - /url: /search
+          - img [ref=e16]
+        - link "Ask" [ref=e19] [cursor=pointer]:
+          - /url: /ask
+          - img [ref=e20]
+        - link "Add" [ref=e22] [cursor=pointer]:
+          - /url: /add
+          - img [ref=e23]
+        - link "Topics" [ref=e25] [cursor=pointer]:
+          - /url: /topics
+          - img [ref=e26]
+    - generic "v0.1.0" [ref=e31]: v0.1
+  - main [ref=e32]:
+    - generic [ref=e34]:
+      - link "Library" [ref=e35] [cursor=pointer]:
+        - /url: /library
+        - img [ref=e36]
+        - text: Library
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - heading "NIKE Athlete Intelligence by 2030.md" [level=1] [ref=e40]
+          - generic [ref=e41]:
+            - generic [ref=e42]: MD
+            - button "Unread" [ref=e43] [cursor=pointer]:
+              - img [ref=e44]
+              - text: Unread
+            - generic [ref=e46]: Added May 2, 2026
+        - generic [ref=e47]:
+          - button "Open source" [ref=e48] [cursor=pointer]:
+            - img [ref=e49]
+          - button "Delete document" [ref=e53] [cursor=pointer]:
+            - img [ref=e54]
+      - generic [ref=e57]:
+        - link "#Nike" [ref=e58] [cursor=pointer]:
+          - /url: /library?tag=Nike
+          - generic [ref=e59]: "#Nike"
+        - link "#Athlete Intelligence" [ref=e60] [cursor=pointer]:
+          - /url: /library?tag=Athlete%20Intelligence
+          - generic [ref=e61]: "#Athlete Intelligence"
+        - link "#AI coaching" [ref=e62] [cursor=pointer]:
+          - /url: /library?tag=AI%20coaching
+          - generic [ref=e63]: "#AI coaching"
+        - link "#Sports technology" [ref=e64] [cursor=pointer]:
+          - /url: /library?tag=Sports%20technology
+          - generic [ref=e65]: "#Sports technology"
+        - link "#Recurring revenue" [ref=e66] [cursor=pointer]:
+          - /url: /library?tag=Recurring%20revenue
+          - generic [ref=e67]: "#Recurring revenue"
+        - link "#Data privacy" [ref=e68] [cursor=pointer]:
+          - /url: /library?tag=Data%20privacy
+          - generic [ref=e69]: "#Data privacy"
+        - link "#Athletic performance" [ref=e70] [cursor=pointer]:
+          - /url: /library?tag=Athletic%20performance
+          - generic [ref=e71]: "#Athletic performance"
+        - link "#SaaS" [ref=e72] [cursor=pointer]:
+          - /url: /library?tag=SaaS
+          - generic [ref=e73]: "#SaaS"
+        - link "#Digital twins" [ref=e74] [cursor=pointer]:
+          - /url: /library?tag=Digital%20twins
+          - generic [ref=e75]: "#Digital twins"
+        - link "#Athlete rights" [ref=e76] [cursor=pointer]:
+          - /url: /library?tag=Athlete%20rights
+          - generic [ref=e77]: "#Athlete rights"
+        - link "#NIL (Name" [ref=e78] [cursor=pointer]:
+          - /url: /library?tag=NIL%20(Name
+          - generic [ref=e79]: "#NIL (Name"
+        - link "#Image" [ref=e80] [cursor=pointer]:
+          - /url: /library?tag=Image
+          - generic [ref=e81]: "#Image"
+        - link "#Likeness)" [ref=e82] [cursor=pointer]:
+          - /url: /library?tag=Likeness)
+          - generic [ref=e83]: "#Likeness)"
+        - link "#Trust and governance" [ref=e84] [cursor=pointer]:
+          - /url: /library?tag=Trust%20and%20governance
+          - generic [ref=e85]: "#Trust and governance"
+        - link "#Consumer subscription" [ref=e86] [cursor=pointer]:
+          - /url: /library?tag=Consumer%20subscription
+          - generic [ref=e87]: "#Consumer subscription"
+        - link "#Enterprise software" [ref=e88] [cursor=pointer]:
+          - /url: /library?tag=Enterprise%20software
+          - generic [ref=e89]: "#Enterprise software"
+      - generic [ref=e90]:
+        - heading "Summary" [level=2] [ref=e91]
+        - paragraph [ref=e92]: "Nike should build Athlete Intelligence, a privacy-first AI platform that helps athletes understand, improve, verify, and monetize their performance, positioning itself as Nike's intelligence layer for sport rather than a fitness app or wearable. By 2030, this recurring-revenue business could generate $3-5 billion annually through five product lines: Nike Coach+ (consumer AI coaching), Nike Performance Cloud (team SaaS), Nike Athlete Passport (verified athletic identity and data wallet), Nike Virtual Athlete Studio (licensed digital athlete content), and Nike Intelligence Exchange (privacy-preserving APIs). Success requires treating athlete data as a trust asset rather than an advertising or resale asset, with governance commitments including no raw data resale, purpose-bound consent, human oversight for high-stakes decisions, and athlete royalties for licensed content."
+      - generic [ref=e93]:
+        - generic [ref=e94]:
+          - generic [ref=e95]:
+            - generic [ref=e96]: Reader
+            - generic [ref=e97]: •
+            - generic [ref=e98]: 4,331 words
+            - generic [ref=e99]: •
+            - generic [ref=e100]: 22 min read
+          - generic [ref=e101]: Truncated
+        - generic [ref=e103]:
+          - heading "NIKE Athlete Intelligence by 2030" [level=2] [ref=e104]:
+            - strong [ref=e105]: NIKE Athlete Intelligence by 2030
+          - heading "Executive thesis" [level=3] [ref=e106]
+          - paragraph [ref=e107]:
+            - text: Nike should build a new recurring-revenue business called
+            - strong [ref=e108]: Athlete Intelligence
+            - text: ": a privacy-first AI platform that helps athletes understand, improve, verify, and monetize their athletic performance. This should not be positioned as a fitness app, a wearable, a data brokerage, or a Web3 reboot. It should be positioned as"
+            - strong [ref=e109]: Nike’s intelligence layer for sport
+            - text: .
+          - paragraph [ref=e110]:
+            - text: By 2030, Athlete Intelligence can plausibly become a
+            - strong [ref=e111]: $3–5 billion annual revenue business
+            - text: "from software subscriptions, team SaaS, athlete data-wallet services, rights-cleared digital athlete products, enterprise wellness, events, and developer/API licensing. The strategic value is larger than the revenue: it would move Nike from selling products around athletic identity to operating the trusted system that understands athletic identity."
+          - paragraph [ref=e112]: "The attached reports support the market logic: AI in sports is already moving from isolated analytics into coaching, biomechanics, digital twins, automated media, athlete rights, and fan-personalization infrastructure, while the highest-risk applications remain athlete health, employment, biometric use, and data ownership."
+          - paragraph [ref=e113]: Nike needs this because the current business is still heavily exposed to physical-product cycles, channel mix, tariffs, discounting, and digital-commerce volatility. In FY2025, Nike reported $46.3 billion of revenue, down 10% reported, while Nike Direct revenue declined 13% and Nike Brand Digital declined 20%; in Q3 FY2026, Nike Direct revenue was $4.5 billion, down 7% currency-neutral, with Nike Brand Digital down 9% and gross margin at 40.2%.
+          - paragraph [ref=e114]:
+            - text: "The board-level question is not “Can Nike add AI to its apps?” The question is:"
+            - strong [ref=e115]: Can Nike create the dominant trusted intelligence business for the world’s athletes before Apple, WHOOP, Strava, sports-tech SaaS vendors, and AI-native coaching startups fragment the market?
+          - paragraph [ref=e116]:
+            - text: "My answer:"
+            - strong [ref=e117]: yes, if Nike treats athlete data as a trust asset, not an advertising asset.
+          - separator [ref=e118]
+          - heading "1. The board narrative" [level=2] [ref=e119]
+          - heading "The pitch in one sentence" [level=3] [ref=e120]
+          - paragraph [ref=e121]:
+            - strong [ref=e122]: "Nike should become the operating system for athletic potential: the platform that understands how athletes move, coaches them daily, verifies their performance identity, protects their data rights, and creates new revenue from intelligence rather than inventory."
+          - heading "The board-room version" [level=3] [ref=e123]
+          - paragraph [ref=e124]: "Nike has spent decades building the world’s most powerful athletic brand. It has also built an under-monetized digital asset: a global relationship with athletes through Nike Membership, Nike App, Nike Run Club, Nike Training Club, SNKRS, retail, events, sponsored athletes, sport-science research, product fit, and performance data."
+          - paragraph [ref=e125]:
+            - text: Today, that relationship is still monetized primarily through shoes, apparel, and equipment. By 2030, it should also be monetized through
+            - strong [ref=e126]: AI-powered intelligence products
+            - text: ":"
+          - list [ref=e127]:
+            - listitem [ref=e128]:
+              - strong [ref=e129]: Nike Coach+
+              - text: for consumers.
+            - listitem [ref=e130]:
+              - strong [ref=e131]: Nike Performance Cloud
+              - text: for teams, schools, academies, and clubs.
+            - listitem [ref=e132]:
+              - strong [ref=e133]: Nike Athlete Passport
+              - text: for verified performance, recruiting, NIL, and athlete-owned data.
+            - listitem [ref=e134]:
+              - strong [ref=e135]: Nike Virtual Athlete Studio
+              - text: for licensed athlete digital twins, training content, gaming, and media.
+            - listitem [ref=e136]:
+              - strong [ref=e137]: Nike Intelligence Exchange
+              - text: for privacy-preserving APIs, race/event intelligence, corporate wellness, and partner ecosystems.
+          - paragraph [ref=e138]:
+            - text: The goal is not to sell personal data. The goal is to sell
+            - strong [ref=e139]: outcomes
+            - text: ": better coaching, better adherence, better readiness, better scouting, better athlete control, better fan/media experiences, and better sport participation."
+          - separator [ref=e140]
+          - heading "2. Why Nike has a right to win" [level=2] [ref=e141]
+          - paragraph [ref=e142]: Nike already has many of the ingredients required for an Athlete Intelligence business.
+          - table [ref=e144]:
+            - rowgroup [ref=e145]:
+              - row "Nike asset Why it matters for Athlete Intelligence" [ref=e146]:
+                - columnheader "Nike asset" [ref=e147]
+                - columnheader "Why it matters for Athlete Intelligence" [ref=e148]
+            - rowgroup [ref=e149]:
+              - row "Nike Membership A global identity layer across apps, experiences, product access, commerce, returns, and events. Nike describes membership as access to Nike through apps, exclusive products, and member-only experiences." [ref=e150]:
+                - cell "Nike Membership" [ref=e151]:
+                  - strong [ref=e152]: Nike Membership
+                - cell "A global identity layer across apps, experiences, product access, commerce, returns, and events. Nike describes membership as access to Nike through apps, exclusive products, and member-only experiences." [ref=e153]
+              - row "Nike Run Club A mature movement-data product. NRC tracks pace, location, distance, elevation, heart rate, mile splits, progress over time, and shoe mileage; it also offers training plans and guided runs." [ref=e154]:
+                - cell "Nike Run Club" [ref=e155]:
+                  - strong [ref=e156]: Nike Run Club
+                - cell "A mature movement-data product. NRC tracks pace, location, distance, elevation, heart rate, mile splits, progress over time, and shoe mileage; it also offers training plans and guided runs." [ref=e157]
+              - row "Nike Training Club A cross-training, recovery, nutrition, sleep, mindset, and wellness content base that can become the retrieval and intervention layer for AI coaching." [ref=e158]:
+                - cell "Nike Training Club" [ref=e159]:
+                  - strong [ref=e160]: Nike Training Club
+                - cell "A cross-training, recovery, nutrition, sleep, mindset, and wellness content base that can become the retrieval and intervention layer for AI coaching." [ref=e161]
+              - row "Partner integrations NRC and NTC can connect with partner apps/devices such as Strava and Garmin, and with Apple Health for metrics such as active energy, heart rate, walking/running distance, and workouts." [ref=e162]:
+                - cell "Partner integrations" [ref=e163]:
+                  - strong [ref=e164]: Partner integrations
+                - cell "NRC and NTC can connect with partner apps/devices such as Strava and Garmin, and with Apple Health for metrics such as active energy, heart rate, walking/running distance, and workouts." [ref=e165]
+              - row "Elite athlete network Sponsored athletes can provide licensed expertise, movement signatures, training protocols, mindset content, and digital-replica rights." [ref=e166]:
+                - cell "Elite athlete network" [ref=e167]:
+                  - strong [ref=e168]: Elite athlete network
+                - cell "Sponsored athletes can provide licensed expertise, movement signatures, training protocols, mindset content, and digital-replica rights." [ref=e169]
+              - row "Sport-science credibility Nike can combine sports science, product testing, human performance research, and AI into a consumer-facing and enterprise-facing intelligence layer." [ref=e170]:
+                - cell "Sport-science credibility" [ref=e171]:
+                  - strong [ref=e172]: Sport-science credibility
+                - cell "Nike can combine sports science, product testing, human performance research, and AI into a consumer-facing and enterprise-facing intelligence layer." [ref=e173]
+              - row "Brand trust The decisive moat. Athlete Intelligence works only if users believe Nike will not exploit sensitive performance, biometric, or youth-athlete data." [ref=e174]:
+                - cell "Brand trust" [ref=e175]:
+                  - strong [ref=e176]: Brand trust
+                - cell "The decisive moat. Athlete Intelligence works only if users believe Nike will not exploit sensitive performance, biometric, or youth-athlete data." [ref=e177]
+          - paragraph [ref=e178]: The competitor proof is already visible. WHOOP offers 24/7 monitoring across sleep, strain, stress, and heart health, with membership tiers starting at $199/year; WHOOP Coach uses GPT-4 to deliver personalized health and fitness coaching from biometric data. Apple Fitness+ charges $9.99/month or $79.99/year, and Strava’s U.S. subscription is listed at $11.99/month or $79.99/year.
+          - paragraph [ref=e179]: Nike’s opportunity is to be broader than WHOOP, more sport-specific than Apple, more coachable than Strava, and more trusted by athletes than data brokers or team-surveillance vendors.
+          - separator [ref=e180]
+          - 'heading "3. The 2030 vision: Nike Athlete Intelligence" [level=2] [ref=e181]':
+            - text: "3. The 2030 vision:"
+            - strong [ref=e182]: Nike Athlete Intelligence
+          - heading "Definition" [level=3] [ref=e183]
+          - paragraph [ref=e184]:
+            - strong [ref=e185]: Nike Athlete Intelligence is a consent-based AI platform that converts movement, training, fit, recovery, content, and athlete-rights data into personalized coaching, team decision support, verified athlete identity, and licensed digital-athlete products.
+          - paragraph [ref=e186]: "It should have five layers:"
+          - table [ref=e188]:
+            - rowgroup [ref=e189]:
+              - row "Layer Description" [ref=e190]:
+                - columnheader "Layer" [ref=e191]
+                - columnheader "Description" [ref=e192]
+            - rowgroup [ref=e193]:
+              - row "1. Athlete Data Vault User-controlled permissions for movement, workouts, biometrics, fit, purchase, video, training, and athlete-rights data." [ref=e194]:
+                - cell "1. Athlete Data Vault" [ref=e195]:
+                  - strong [ref=e196]: 1. Athlete Data Vault
+                - cell "User-controlled permissions for movement, workouts, biometrics, fit, purchase, video, training, and athlete-rights data." [ref=e197]
+              - row "2. Nike Athlete Graph A structured representation of an athlete’s goals, sport, training history, constraints, equipment, strengths, weaknesses, readiness, and progression." [ref=e198]:
+                - cell "2. Nike Athlete Graph" [ref=e199]:
+                  - strong [ref=e200]: 2. Nike Athlete Graph
+                - cell "A structured representation of an athlete’s goals, sport, training history, constraints, equipment, strengths, weaknesses, readiness, and progression." [ref=e201]
+              - row "3. Movement Foundation Models Computer-vision and time-series models for gait, stride, jumping, landing, mobility, strength movements, fatigue signals, and skill-specific mechanics." [ref=e202]:
+                - cell "3. Movement Foundation Models" [ref=e203]:
+                  - strong [ref=e204]: 3. Movement Foundation Models
+                - cell "Computer-vision and time-series models for gait, stride, jumping, landing, mobility, strength movements, fatigue signals, and skill-specific mechanics." [ref=e205]
+              - row "4. Coaching and Decision Products Consumer coaching, team dashboards, training-plan generation, movement analysis, event preparation, and athlete passports." [ref=e206]:
+                - cell "4. Coaching and Decision Products" [ref=e207]:
+                  - strong [ref=e208]: 4. Coaching and Decision Products
+                - cell "Consumer coaching, team dashboards, training-plan generation, movement analysis, event preparation, and athlete passports." [ref=e209]
+              - row "5. Trust and Rights Layer Consent, revocation, audit logs, athlete royalties, model cards, bias testing, human oversight, and jurisdiction-specific compliance." [ref=e210]:
+                - cell "5. Trust and Rights Layer" [ref=e211]:
+                  - strong [ref=e212]: 5. Trust and Rights Layer
+                - cell "Consent, revocation, audit logs, athlete royalties, model cards, bias testing, human oversight, and jurisdiction-specific compliance." [ref=e213]
+          - paragraph [ref=e214]:
+            - text: "The critical design choice:"
+            - strong [ref=e215]: Nike should not sell raw athlete data.
+            - text: It should monetize the intelligence, workflow, and licensing layer built on top of data that athletes actively choose to share.
+          - separator [ref=e216]
+          - heading "4. Product portfolio by 2030" [level=2] [ref=e217]
+          - 'heading "Product 1: Nike Coach+" [level=3] [ref=e218]':
+            - text: "Product 1:"
+            - strong [ref=e219]: Nike Coach+
+          - heading "Customer" [level=4] [ref=e220]
+          - paragraph [ref=e221]: Everyday athletes, runners, gym users, youth athletes, parents, weekend competitors, and serious amateurs.
+          - heading "Product concept" [level=4] [ref=e222]
+          - paragraph [ref=e223]: Nike Coach+ becomes the paid intelligence tier above free NRC and NTC. The free apps remain the acquisition engine. Coach+ is the premium product that gives athletes daily, adaptive, personalized coaching.
+          - heading "Core features" [level=4] [ref=e224]
+          - table [ref=e226]:
+            - rowgroup [ref=e227]:
+              - row "Feature What it does" [ref=e228]:
+                - columnheader "Feature" [ref=e229]
+                - columnheader "What it does" [ref=e230]
+            - rowgroup [ref=e231]:
+              - row "Daily adaptive plan Adjusts running, strength, mobility, recovery, and rest based on goals, recent workouts, schedule, weather, sleep, soreness, HR, and readiness signals." [ref=e232]:
+                - cell "Daily adaptive plan" [ref=e233]:
+                  - strong [ref=e234]: Daily adaptive plan
+                - cell "Adjusts running, strength, mobility, recovery, and rest based on goals, recent workouts, schedule, weather, sleep, soreness, HR, and readiness signals." [ref=e235]
+              - 'row "Conversational coach Lets athletes ask: “Why did I feel slow today?”, “How should I train for a half marathon in 11 weeks?”, “What should I do if my calf feels tight?”" [ref=e236]':
+                - cell "Conversational coach" [ref=e237]:
+                  - strong [ref=e238]: Conversational coach
+                - 'cell "Lets athletes ask: “Why did I feel slow today?”, “How should I train for a half marathon in 11 weeks?”, “What should I do if my calf feels tight?”" [ref=e239]'
+              - row "Camera movement checks Smartphone-based gait, squat, jump, landing, stride, mobility, and form assessments." [ref=e240]:
+                - cell "Camera movement checks" [ref=e241]:
+                  - strong [ref=e242]: Camera movement checks
+                - cell "Smartphone-based gait, squat, jump, landing, stride, mobility, and form assessments." [ref=e243]
+              - row "Race and event intelligence Pacing plans, weather-adjusted strategy, route-specific preparation, taper management, and post-race recovery." [ref=e244]:
+                - cell "Race and event intelligence" [ref=e245]:
+                  - strong [ref=e246]: Race and event intelligence
+                - cell "Pacing plans, weather-adjusted strategy, route-specific preparation, taper management, and post-race recovery." [ref=e247]
+              - row "Mindset and adherence coach Uses behavioral AI to keep athletes consistent without manipulative dark patterns." [ref=e248]:
+                - cell "Mindset and adherence coach" [ref=e249]:
+                  - strong [ref=e250]: Mindset and adherence coach
+                - cell "Uses behavioral AI to keep athletes consistent without manipulative dark patterns." [ref=e251]
+              - row "Product-aware training Uses shoe mileage, fit, sport, and surface data to guide equipment use, but product recommendations should be separated from health/performance claims." [ref=e252]:
+                - cell "Product-aware training" [ref=e253]:
+                  - strong [ref=e254]: Product-aware training
+                - cell "Uses shoe mileage, fit, sport, and surface data to guide equipment use, but product recommendations should be separated from health/performance claims." [ref=e255]
+              - row "Family and youth mode Parent-controlled coaching, age-appropriate progression, privacy controls, and no sensitive ad targeting." [ref=e256]:
+                - cell "Family and youth mode" [ref=e257]:
+                  - strong [ref=e258]: Family and youth mode
+                - cell "Parent-controlled coaching, age-appropriate progression, privacy controls, and no sensitive ad targeting." [ref=e259]
+          - heading "Why Nike can win" [level=4] [ref=e260]
+          - paragraph [ref=e261]: Nike already has free training guidance through NRC and NTC, including NRC training plans, approximately 300 audio guided runs, and availability in 11 languages across more than 160 countries.
+          - heading "Revenue model" [level=4] [ref=e262]
+          - paragraph [ref=e263]: Free core apps remain free. Coach+ becomes a paid tier.
+          - paragraph [ref=e264]: "Illustrative 2030 base case:"
+          - table [ref=e266]:
+            - rowgroup [ref=e267]:
+              - row "Metric Assumption" [ref=e268]:
+                - columnheader "Metric" [ref=e269]
+                - columnheader "Assumption" [ref=e270]
+            - rowgroup [ref=e271]:
+              - row "Paid subscribers 15 million" [ref=e272]:
+                - cell "Paid subscribers" [ref=e273]
+                - cell "15 million" [ref=e274]
+              - row "Net ARPU $110/year" [ref=e275]:
+                - cell "Net ARPU" [ref=e276]
+                - cell "$110/year" [ref=e277]
+              - row "Annual revenue $1.65 billion" [ref=e278]:
+                - cell "Annual revenue" [ref=e279]
+                - cell "$1.65 billion" [ref=e280]:
+                  - strong [ref=e281]: $1.65 billion
+              - row "Gross margin 70–80% software-like margin before heavy AI inference/content costs" [ref=e282]:
+                - cell "Gross margin" [ref=e283]
+                - cell "70–80% software-like margin before heavy AI inference/content costs" [ref=e284]
+          - paragraph [ref=e285]: This is plausible because the subscription category is already normalized at roughly $80/year for Apple Fitness+ and Strava, while WHOOP proves that performance-focused consumers will pay substantially more when the product combines data, personalization, and coaching.
+          - separator [ref=e286]
+          - 'heading "Product 2: Nike Performance Cloud" [level=3] [ref=e287]':
+            - text: "Product 2:"
+            - strong [ref=e288]: Nike Performance Cloud
+          - heading "Customer" [level=4] [ref=e289]
+          - paragraph [ref=e290]: High schools, colleges, youth clubs, academies, professional clubs, federations, trainers, gyms, and Nike-sponsored teams.
+          - heading "Product concept" [level=4] [ref=e291]
+          - paragraph [ref=e292]:
+            - text: A team and academy SaaS platform for training load, movement screening, roster readiness, athlete communication, and coach workflow. This should be built as
+            - strong [ref=e293]: decision support
+            - text: ", not automated medical or employment decision-making."
+          - heading "Core features" [level=4] [ref=e294]
+          - table [ref=e296]:
+            - rowgroup [ref=e297]:
+              - row "Feature What it does" [ref=e298]:
+                - columnheader "Feature" [ref=e299]
+                - columnheader "What it does" [ref=e300]
+            - rowgroup [ref=e301]:
+              - row "Roster readiness dashboard Aggregates workload, wellness, training completion, soreness, and recovery signals." [ref=e302]:
+                - cell "Roster readiness dashboard" [ref=e303]:
+                  - strong [ref=e304]: Roster readiness dashboard
+                - cell "Aggregates workload, wellness, training completion, soreness, and recovery signals." [ref=e305]
+              - 'row "Mobile movement testing Standardized 20-second tests: jump, landing, squat, sprint mechanics, balance, mobility." [ref=e306]':
+                - cell "Mobile movement testing" [ref=e307]:
+                  - strong [ref=e308]: Mobile movement testing
+                - 'cell "Standardized 20-second tests: jump, landing, squat, sprint mechanics, balance, mobility." [ref=e309]'
+              - row "Training-plan generator Produces individualized sessions by athlete, position, training age, injury history, and team schedule." [ref=e310]:
+                - cell "Training-plan generator" [ref=e311]:
+                  - strong [ref=e312]: Training-plan generator
+                - cell "Produces individualized sessions by athlete, position, training age, injury history, and team schedule." [ref=e313]
+              - row "Coach copilot Helps coaches interpret signals, communicate with athletes, and design interventions." [ref=e314]:
+                - cell "Coach copilot" [ref=e315]:
+                  - strong [ref=e316]: Coach copilot
+                - cell "Helps coaches interpret signals, communicate with athletes, and design interventions." [ref=e317]
+              - row "Return-to-play workflow Tracks rehab milestones and human-approved readiness steps." [ref=e318]:
+                - cell "Return-to-play workflow" [ref=e319]:
+                  - strong [ref=e320]: Return-to-play workflow
+                - cell "Tracks rehab milestones and human-approved readiness steps." [ref=e321]
+              - row "Compliance mode Separates coach, medical, athlete, and administrator views; logs access and decisions." [ref=e322]:
+                - cell "Compliance mode" [ref=e323]:
+                  - strong [ref=e324]: Compliance mode
+                - cell "Separates coach, medical, athlete, and administrator views; logs access and decisions." [ref=e325]
+              - row "Parent/youth safeguards Strong minor-data controls and parental consent." [ref=e326]:
+                - cell "Parent/youth safeguards" [ref=e327]:
+                  - strong [ref=e328]: Parent/youth safeguards
+                - cell "Strong minor-data controls and parental consent." [ref=e329]
+          - heading "Why Nike can win" [level=4] [ref=e330]
+          - paragraph [ref=e331]: The sports-AI market is already moving toward wearables, digital twins, performance optimization, automated scouting, and AI-assisted coaching, but the attached research notes that injury prediction and high-stakes athlete decisions remain unevenly validated and legally sensitive. Nike’s advantage would be to make this category trusted, explainable, and athlete-centered rather than surveillance-centered.
+          - heading "Revenue model" [level=4] [ref=e332]
+          - paragraph [ref=e333]: "Illustrative 2030 base case:"
+          - table [ref=e335]:
+            - rowgroup [ref=e336]:
+              - row "Segment Assumption Revenue" [ref=e337]:
+                - columnheader "Segment" [ref=e338]
+                - columnheader "Assumption" [ref=e339]
+                - columnheader "Revenue" [ref=e340]
+            - rowgroup [ref=e341]:
+              - row "Youth clubs / high schools 50,000 teams × $5,000/year $250M" [ref=e342]:
+                - cell "Youth clubs / high schools" [ref=e343]
+                - cell "50,000 teams × $5,000/year" [ref=e344]
+                - cell "$250M" [ref=e345]
+              - row "Academies / universities / federations 3,000 orgs × $100,000/year $300M" [ref=e346]:
+                - cell "Academies / universities / federations" [ref=e347]
+                - cell "3,000 orgs × $100,000/year" [ref=e348]
+                - cell "$300M" [ref=e349]
+              - row "Elite teams / pro clubs 350 orgs × $750,000/year $263M" [ref=e350]:
+                - cell "Elite teams / pro clubs" [ref=e351]
+                - cell "350 orgs × $750,000/year" [ref=e352]
+                - cell "$263M" [ref=e353]
+              - row "Services / integrations Implementation, analytics, support $100M" [ref=e354]:
+                - cell "Services / integrations" [ref=e355]
+                - cell "Implementation, analytics, support" [ref=e356]
+                - cell "$100M" [ref=e357]
+              - row "Total ~$900M" [ref=e358]:
+                - cell "Total" [ref=e359]:
+                  - strong [ref=e360]: Total
+                - cell [ref=e361]
+                - cell "~$900M" [ref=e362]:
+                  - strong [ref=e363]: ~$900M
+          - paragraph [ref=e364]: This product can also reinforce Nike’s existing team-sales and sponsorship relationships without counting physical-product revenue.
+          - separator [ref=e365]
+          - 'heading "Product 3: Nike Athlete Passport" [level=3] [ref=e366]':
+            - text: "Product 3:"
+            - strong [ref=e367]: Nike Athlete Passport
+          - heading "Customer" [level=4] [ref=e368]
+          - paragraph [ref=e369]: Youth athletes, high school athletes, college athletes, parents, coaches, recruiters, NIL collectives, agents, player associations, and eventually professional athletes.
+          - heading "Product concept" [level=4] [ref=e370]
+          - paragraph [ref=e371]: A verified, athlete-controlled data wallet that stores performance history, training milestones, movement assessments, sport-specific tests, highlight metadata, NIL permissions, and digital-replica rights.
+          - paragraph [ref=e372]:
+            - text: Nike should make the Athlete Passport the standard for
+            - strong [ref=e373]: portable athletic identity
+            - text: .
+          - heading "Core features" [level=4] [ref=e374]
+          - table [ref=e376]:
+            - rowgroup [ref=e377]:
+              - row "Feature What it does" [ref=e378]:
+                - columnheader "Feature" [ref=e379]
+                - columnheader "What it does" [ref=e380]
+            - rowgroup [ref=e381]:
+              - row "Verified performance profile Standardized test results, movement assessments, training history, event results, and coach validation." [ref=e382]:
+                - cell "Verified performance profile" [ref=e383]:
+                  - strong [ref=e384]: Verified performance profile
+                - cell "Standardized test results, movement assessments, training history, event results, and coach validation." [ref=e385]
+              - row "Recruiting profile AI-generated but human-reviewed athlete summaries, highlight tagging, skill comparisons, and development trajectory." [ref=e386]:
+                - cell "Recruiting profile" [ref=e387]:
+                  - strong [ref=e388]: Recruiting profile
+                - cell "AI-generated but human-reviewed athlete summaries, highlight tagging, skill comparisons, and development trajectory." [ref=e389]
+              - 'row "Consent dashboard Athlete controls who can see what: coaches, recruiters, sponsors, teams, media, or NIL platforms." [ref=e390]':
+                - cell "Consent dashboard" [ref=e391]:
+                  - strong [ref=e392]: Consent dashboard
+                - 'cell "Athlete controls who can see what: coaches, recruiters, sponsors, teams, media, or NIL platforms." [ref=e393]'
+              - row "NIL and digital-replica controls Explicit permissions for image, likeness, voice, motion, avatar, training data, and synthetic-media use." [ref=e394]:
+                - cell "NIL and digital-replica controls" [ref=e395]:
+                  - strong [ref=e396]: NIL and digital-replica controls
+                - cell "Explicit permissions for image, likeness, voice, motion, avatar, training data, and synthetic-media use." [ref=e397]
+              - row "Revenue-share engine Athletes receive royalties when their licensed data, likeness, movement, or training content is monetized." [ref=e398]:
+                - cell "Revenue-share engine" [ref=e399]:
+                  - strong [ref=e400]: Revenue-share engine
+                - cell "Athletes receive royalties when their licensed data, likeness, movement, or training content is monetized." [ref=e401]
+              - row "Guardian mode Strict controls for minors." [ref=e402]:
+                - cell "Guardian mode" [ref=e403]:
+                  - strong [ref=e404]: Guardian mode
+                - cell "Strict controls for minors." [ref=e405]
+          - heading "Why Nike can win" [level=4] [ref=e406]
+          - paragraph [ref=e407]: "The attached reports emphasize that athlete IP is expanding beyond name, image, and likeness into biometric, performance, movement, and digital-replica rights. The strategic bottleneck is governance: consent, revocation, validation, transparency, and rights-cleared data."
+          - heading "Revenue model" [level=4] [ref=e408]
+          - paragraph [ref=e409]: "Illustrative 2030 base case:"
+          - table [ref=e411]:
+            - rowgroup [ref=e412]:
+              - row "Revenue source Assumption Revenue" [ref=e413]:
+                - columnheader "Revenue source" [ref=e414]
+                - columnheader "Assumption" [ref=e415]
+                - columnheader "Revenue" [ref=e416]
+            - rowgroup [ref=e417]:
+              - row "Athlete Passport premium 5M athletes × $25/year $125M" [ref=e418]:
+                - cell "Athlete Passport premium" [ref=e419]
+                - cell "5M athletes × $25/year" [ref=e420]
+                - cell "$125M" [ref=e421]
+              - row "Recruiter / institution tools Schools, academies, teams, scouts $150M" [ref=e422]:
+                - cell "Recruiter / institution tools" [ref=e423]
+                - cell "Schools, academies, teams, scouts" [ref=e424]
+                - cell "$150M" [ref=e425]
+              - row "NIL / rights-clearing take rate Licensing, digital content, verified media $225M" [ref=e426]:
+                - cell "NIL / rights-clearing take rate" [ref=e427]
+                - cell "Licensing, digital content, verified media" [ref=e428]
+                - cell "$225M" [ref=e429]
+              - row "Total ~$500M" [ref=e430]:
+                - cell "Total" [ref=e431]:
+                  - strong [ref=e432]: Total
+                - cell [ref=e433]
+                - cell "~$500M" [ref=e434]:
+                  - strong [ref=e435]: ~$500M
+          - paragraph [ref=e436]: Strategically, this could be one of Nike’s most important long-term moats because it makes Nike the trusted home of athletic identity from youth participation through elite sport.
+          - separator [ref=e437]
+          - 'heading "Product 4: Nike Virtual Athlete Studio" [level=3] [ref=e438]':
+            - text: "Product 4:"
+            - strong [ref=e439]: Nike Virtual Athlete Studio
+          - heading "Customer" [level=4] [ref=e440]
+          - paragraph [ref=e441]: Consumers, athletes, game publishers, media platforms, training apps, schools, leagues, broadcasters, and sponsors.
+          - heading "Product concept" [level=4] [ref=e442]
+          - paragraph [ref=e443]: A rights-cleared studio for AI-generated athlete training experiences, virtual coaching, digital twins, games, and interactive media.
+          - paragraph [ref=e444]: This should not be a speculative NFT business. Nike acquired RTFKT in 2021 to build virtual creations that merged culture and gaming, and .SWOOSH had more than 330,000 members when it launched its first digital-creation collection; however, the next version should focus on athlete utility, licensed identity, and recurring software economics rather than collectible speculation.
+          - heading "Core features" [level=4] [ref=e445]
+          - table [ref=e447]:
+            - rowgroup [ref=e448]:
+              - row "Feature What it does" [ref=e449]:
+                - columnheader "Feature" [ref=e450]
+                - columnheader "What it does" [ref=e451]
+            - rowgroup [ref=e452]:
+              - row "Train with an athlete Licensed AI-guided sessions from Nike athletes using approved voice, style, movement, and coaching IP." [ref=e453]:
+                - cell "Train with an athlete" [ref=e454]:
+                  - strong [ref=e455]: Train with an athlete
+                - cell "Licensed AI-guided sessions from Nike athletes using approved voice, style, movement, and coaching IP." [ref=e456]
+              - row "Motion libraries Rights-cleared movement signatures for games, training, broadcast, and virtual sport experiences." [ref=e457]:
+                - cell "Motion libraries" [ref=e458]:
+                  - strong [ref=e459]: Motion libraries
+                - cell "Rights-cleared movement signatures for games, training, broadcast, and virtual sport experiences." [ref=e460]
+              - row "Synthetic training content Personalized drills narrated by licensed athlete personas or Nike coaches." [ref=e461]:
+                - cell "Synthetic training content" [ref=e462]:
+                  - strong [ref=e463]: Synthetic training content
+                - cell "Personalized drills narrated by licensed athlete personas or Nike coaches." [ref=e464]
+              - row "Game and metaverse integrations Digital performance identity, training challenges, avatars, and sport-specific quests." [ref=e465]:
+                - cell "Game and metaverse integrations" [ref=e466]:
+                  - strong [ref=e467]: Game and metaverse integrations
+                - cell "Digital performance identity, training challenges, avatars, and sport-specific quests." [ref=e468]
+              - row "Athlete royalty dashboard Transparent reporting and payouts for every licensed use." [ref=e469]:
+                - cell "Athlete royalty dashboard" [ref=e470]:
+                  - strong [ref=e471]: Athlete royalty dashboard
+                - cell "Transparent reporting and payouts for every licensed use." [ref=e472]
+          - heading "Revenue model" [level=4] [ref=e473]
+          - paragraph [ref=e474]: "Illustrative 2030 base case:"
+          - table [ref=e476]:
+            - rowgroup [ref=e477]:
+              - row "Revenue source Revenue" [ref=e478]:
+                - columnheader "Revenue source" [ref=e479]
+                - columnheader "Revenue" [ref=e480]
+            - rowgroup [ref=e481]:
+              - row "Consumer premium content $150M" [ref=e482]:
+                - cell "Consumer premium content" [ref=e483]
+                - cell "$150M" [ref=e484]
+              - row "Game/media licensing $175M" [ref=e485]:
+                - cell "Game/media licensing" [ref=e486]
+                - cell "$175M" [ref=e487]
+              - row "Athlete/creator marketplace take rate $75M" [ref=e488]:
+                - cell "Athlete/creator marketplace take rate" [ref=e489]
+                - cell "$75M" [ref=e490]
+              - row "Total ~$400M" [ref=e491]:
+                - cell "Total" [ref=e492]:
+                  - strong [ref=e493]: Total
+                - cell "~$400M" [ref=e494]:
+                  - strong [ref=e495]: ~$400M
+          - paragraph [ref=e496]: This must be governed carefully. Reuters reported in 2025 that Nike was sued by purchasers of Nike-themed NFTs after RTFKT’s closure, with plaintiffs alleging losses tied to the shutdown; whether or not the case succeeds, it illustrates why Athlete Intelligence should emphasize durable utility, clear rights, and consumer protection rather than token speculation.
+          - separator [ref=e497]
+          - 'heading "Product 5: Nike Intelligence Exchange" [level=3] [ref=e498]':
+            - text: "Product 5:"
+            - strong [ref=e499]: Nike Intelligence Exchange
+          - heading "Customer" [level=4] [ref=e500]
+          - paragraph [ref=e501]: Race organizers, gyms, corporate wellness buyers, health clubs, cities, youth sports organizations, app developers, broadcasters, and selected enterprise partners.
+          - heading "Product concept" [level=4] [ref=e502]
+          - paragraph [ref=e503]: A privacy-preserving platform for aggregated, anonymized, and consented intelligence about sport participation, training adherence, event preparation, community activity, and performance trends.
+          - paragraph [ref=e504]:
+            - text: This is the one place where Nike can monetize population-level intelligence, but it must be designed as
+            - strong [ref=e505]: aggregated insight
+            - text: ", not resale of personal data."
+          - heading "Use cases" [level=4] [ref=e506]
+          - table [ref=e508]:
+            - rowgroup [ref=e509]:
+              - row "Customer Product" [ref=e510]:
+                - columnheader "Customer" [ref=e511]
+                - columnheader "Product" [ref=e512]
+            - rowgroup [ref=e513]:
+              - row "Race organizers Training-plan adoption, route preparation, injury-prevention education, race-week communication, post-race recovery programming." [ref=e514]:
+                - cell "Race organizers" [ref=e515]:
+                  - strong [ref=e516]: Race organizers
+                - cell "Training-plan adoption, route preparation, injury-prevention education, race-week communication, post-race recovery programming." [ref=e517]
+              - row "Corporate wellness Employee-paid or employer-paid coaching without employer access to individual sensitive data." [ref=e518]:
+                - cell "Corporate wellness" [ref=e519]:
+                  - strong [ref=e520]: Corporate wellness
+                - cell "Employee-paid or employer-paid coaching without employer access to individual sensitive data." [ref=e521]
+              - row "Gyms and studios Nike-powered adaptive programming and athlete progress layers." [ref=e522]:
+                - cell "Gyms and studios" [ref=e523]:
+                  - strong [ref=e524]: Gyms and studios
+                - cell "Nike-powered adaptive programming and athlete progress layers." [ref=e525]
+              - row "Cities and event operators Aggregated running/walking participation insights for route planning and community sport investment." [ref=e526]:
+                - cell "Cities and event operators" [ref=e527]:
+                  - strong [ref=e528]: Cities and event operators
+                - cell "Aggregated running/walking participation insights for route planning and community sport investment." [ref=e529]
+              - row "Developers APIs for authorized athlete data, training recommendations, content, and movement assessments." [ref=e530]:
+                - cell "Developers" [ref=e531]:
+                  - strong [ref=e532]: Developers
+                - cell "APIs for authorized athlete data, training recommendations, content, and movement assessments." [ref=e533]
+          - heading "Revenue model" [level=4] [ref=e534]
+          - paragraph [ref=e535]: "Illustrative 2030 base case:"
+          - table [ref=e537]:
+            - rowgroup [ref=e538]:
+              - row "Revenue source Revenue" [ref=e539]:
+                - columnheader "Revenue source" [ref=e540]
+                - columnheader "Revenue" [ref=e541]
+            - rowgroup [ref=e542]:
+              - row "Corporate wellness / gyms $300M" [ref=e543]:
+                - cell "Corporate wellness / gyms" [ref=e544]
+                - cell "$300M" [ref=e545]
+              - row "Race and event intelligence $100M" [ref=e546]:
+                - cell "Race and event intelligence" [ref=e547]
+                - cell "$100M" [ref=e548]
+              - row "APIs / partner licensing $150M" [ref=e549]:
+                - cell "APIs / partner licensing" [ref=e550]
+                - cell "$150M" [ref=e551]
+              - row "Total ~$550M" [ref=e552]:
+                - cell "Total" [ref=e553]:
+                  - strong [ref=e554]: Total
+                - cell "~$550M" [ref=e555]:
+                  - strong [ref=e556]: ~$550M
+          - separator [ref=e557]
+          - heading "5. 2030 financial case" [level=2] [ref=e558]
+          - paragraph [ref=e559]: This is an illustrative strategic model, not a forecast. It assumes Nike creates a stand-alone Athlete Intelligence P&L and does not count incremental footwear, apparel, or equipment pull-through.
+          - heading "Base-case 2030 revenue" [level=3] [ref=e560]
+          - table [ref=e562]:
+            - rowgroup [ref=e563]:
+              - row "Business line 2030 base-case revenue" [ref=e564]:
+                - columnheader "Business line" [ref=e565]
+                - columnheader "2030 base-case revenue" [ref=e566]
+            - rowgroup [ref=e567]:
+              - row "Nike Coach+ $1.65B" [ref=e568]:
+                - cell "Nike Coach+" [ref=e569]
+                - cell "$1.65B" [ref=e570]
+              - row "Nike Performance Cloud $0.90B" [ref=e571]:
+                - cell "Nike Performance Cloud" [ref=e572]
+                - cell "$0.90B" [ref=e573]
+              - row "Nike Athlete Passport $0.50B" [ref=e574]:
+                - cell "Nike Athlete Passport" [ref=e575]
+                - cell "$0.50B" [ref=e576]
+              - row "Nike Intelligence Exchange $0.55B" [ref=e577]:
+                - cell "Nike Intelligence Exchange" [ref=e578]
+                - cell "$0.55B" [ref=e579]
+              - row "Nike Virtual Athlete Studio $0.40B" [ref=e580]:
+                - cell "Nike Virtual Athlete Studio" [ref=e581]
+                - cell "$0.40B" [ref=e582]
+              - row "Total ~$4.0B" [ref=e583]:
+                - cell "Total" [ref=e584]:
+                  - strong [ref=e585]: Total
+                - cell "~$4.0B" [ref=e586]:
+                  - strong [ref=e587]: ~$4.0B
+          - heading "Scenario range" [level=3] [ref=e588]
+          - table [ref=e590]:
+            - rowgroup [ref=e591]:
+              - row "Scenario 2030 annual revenue Logic" [ref=e592]:
+                - columnheader "Scenario" [ref=e593]
+                - columnheader "2030 annual revenue" [ref=e594]
+                - columnheader "Logic" [ref=e595]
+            - rowgroup [ref=e596]:
+              - row "Downside $1.3–1.8B Consumer subscription adoption modest; B2B sales slower; athlete-rights products remain niche." [ref=e597]:
+                - cell "Downside" [ref=e598]:
+                  - strong [ref=e599]: Downside
+                - cell "$1.3–1.8B" [ref=e600]
+                - cell "Consumer subscription adoption modest; B2B sales slower; athlete-rights products remain niche." [ref=e601]
+              - row "Base $3.5–4.0B Coach+ reaches meaningful paid adoption; teams and passports scale; enterprise/event licensing emerges." [ref=e602]:
+                - cell "Base" [ref=e603]:
+                  - strong [ref=e604]: Base
+                - cell "$3.5–4.0B" [ref=e605]
+                - cell "Coach+ reaches meaningful paid adoption; teams and passports scale; enterprise/event licensing emerges." [ref=e606]
+              - row "Upside $5.5–6.5B Nike becomes the default AI coach and athlete passport for amateur sport; licensed athlete AI content scales globally." [ref=e607]:
+                - cell "Upside" [ref=e608]:
+                  - strong [ref=e609]: Upside
+                - cell "$5.5–6.5B" [ref=e610]
+                - cell "Nike becomes the default AI coach and athlete passport for amateur sport; licensed athlete AI content scales globally." [ref=e611]
+          - heading "Margin profile" [level=3] [ref=e612]
+          - paragraph [ref=e613]: "Athlete Intelligence should have materially better gross-margin potential than physical inventory because revenue comes from software, subscriptions, licensing, and data-workflow products. Realistic gross margins may be lower than pure SaaS in the early years because AI inference, content rights, support, compliance, and athlete royalties will be meaningful costs. Still, the business should target:"
+          - table [ref=e615]:
+            - rowgroup [ref=e616]:
+              - row "Metric Target by 2030" [ref=e617]:
+                - columnheader "Metric" [ref=e618]
+                - columnheader "Target by 2030" [ref=e619]
+            - rowgroup [ref=e620]:
+              - row "Gross margin 65–75%" [ref=e621]:
+                - cell "Gross margin" [ref=e622]
+                - cell "65–75%" [ref=e623]
+              - row "Operating margin 25–35%" [ref=e624]:
+                - cell "Operating margin" [ref=e625]
+                - cell "25–35%" [ref=e626]
+              - row "Annual operating contribution at base case ~$1.0–1.3B" [ref=e627]:
+                - cell "Annual operating contribution at base case" [ref=e628]
+                - cell "~$1.0–1.3B" [ref=e629]
+          - paragraph [ref=e630]: Nike reported $4.0 billion of selling and administrative expense in Q3 FY2026 alone, including $1.1 billion of demand creation expense. A five-year investment of roughly $1.0–1.3 billion in Athlete Intelligence would therefore be a significant but manageable capital-allocation choice, not a balance-sheet-threatening bet.
+          - separator [ref=e631]
+          - 'heading "6. The data strategy: current and future access" [level=2] [ref=e632]'
+          - heading "Current data Nike can use, with consent" [level=3] [ref=e633]
+          - table [ref=e635]:
+            - rowgroup [ref=e636]:
+              - row "Data source Strategic use" [ref=e637]:
+                - columnheader "Data source" [ref=e638]
+                - columnheader "Strategic use" [ref=e639]
+            - rowgroup [ref=e640]:
+              - row "Nike Membership profile Identity, preferences, product history, app usage, events, returns, offers." [ref=e641]:
+                - cell "Nike Membership profile" [ref=e642]:
+                  - strong [ref=e643]: Nike Membership profile
+                - cell "Identity, preferences, product history, app usage, events, returns, offers." [ref=e644]
+              - row "NRC activity data Pace, location, distance, elevation, heart rate, splits, training adherence, progression, shoe mileage." [ref=e645]:
+                - cell "NRC activity data" [ref=e646]:
+                  - strong [ref=e647]: NRC activity data
+                - cell "Pace, location, distance, elevation, heart rate, splits, training adherence, progression, shoe mileage." [ref=e648]
+              - row "NTC workouts Strength, mobility, yoga, HIIT, recovery, nutrition, mindset, and sleep guidance pathways." [ref=e649]:
+                - cell "NTC workouts" [ref=e650]:
+                  - strong [ref=e651]: NTC workouts
+                - cell "Strength, mobility, yoga, HIIT, recovery, nutrition, mindset, and sleep guidance pathways." [ref=e652]
+              - row "Apple Health / Garmin / Strava integrations Broader wearable and activity context, if users connect partners." [ref=e653]:
+                - cell "Apple Health / Garmin / Strava integrations" [ref=e654]:
+                  - strong [ref=e655]: Apple Health / Garmin / Strava integrations
+                - cell "Broader wearable and activity context, if users connect partners." [ref=e656]
+              - row "Product and fit data Shoe usage, sizing, fit, returns, sport-specific product preferences." [ref=e657]:
+                - cell "Product and fit data" [ref=e658]:
+                  - strong [ref=e659]: Product and fit data
+                - cell "Shoe usage, sizing, fit, returns, sport-specific product preferences." [ref=e660]
+              - row "Content and community engagement Which plans, coaches, challenges, and formats improve adherence." [ref=e661]:
+                - cell "Content and community engagement" [ref=e662]:
+                  - strong [ref=e663]: Content and community engagement
+                - cell "Which plans, coaches, challenges, and formats improve adherence." [ref=e664]
+              - row "Retail and event interactions Local sport communities, run clubs, events, trials, and coaching moments." [ref=e665]:
+                - cell "Retail and event interactions" [ref=e666]:
+                  - strong [ref=e667]: Retail and event interactions
+                - cell "Local sport communities, run clubs, events, trials, and coaching moments." [ref=e668]
+          - heading "Future data Nike should pursue" [level=3] [ref=e669]
+          - table [ref=e671]:
+            - rowgroup [ref=e672]:
+              - row "Future data source How to access it" [ref=e673]:
+                - columnheader "Future data source" [ref=e674]
+                - columnheader "How to access it" [ref=e675]
+            - rowgroup [ref=e676]:
+              - row "Smartphone video movement data Opt-in camera assessments for gait, jump, squat, landing, sprint, mobility, sport skills." [ref=e677]:
+                - cell "Smartphone video movement data" [ref=e678]:
+                  - strong [ref=e679]: Smartphone video movement data
+                - cell "Opt-in camera assessments for gait, jump, squat, landing, sprint, mobility, sport skills." [ref=e680]
+              - row "Wearable recovery and sleep data Partnerships rather than forcing a Nike wearable strategy." [ref=e681]:
+                - cell "Wearable recovery and sleep data" [ref=e682]:
+                  - strong [ref=e683]: Wearable recovery and sleep data
+                - cell "Partnerships rather than forcing a Nike wearable strategy." [ref=e684]
+              - 'row "Sensorized footwear/apparel Selective premium use cases: gait, load, surface, impact, sport-specific feedback." [ref=e685]':
+                - cell "Sensorized footwear/apparel" [ref=e686]:
+                  - strong [ref=e687]: Sensorized footwear/apparel
+                - 'cell "Selective premium use cases: gait, load, surface, impact, sport-specific feedback." [ref=e688]'
+              - row "Team and academy data Contracted SaaS deployments with athlete consent and role-based permissions." [ref=e689]:
+                - cell "Team and academy data" [ref=e690]:
+                  - strong [ref=e691]: Team and academy data
+                - cell "Contracted SaaS deployments with athlete consent and role-based permissions." [ref=e692]
+              - row "Licensed elite-athlete motion and coaching data Explicit athlete contracts with royalty-sharing." [ref=e693]:
+                - cell "Licensed elite-athlete motion and coaching data" [ref=e694]:
+                  - strong [ref=e695]: Licensed elite-athlete motion and coaching data
+                - cell "Explicit athlete contracts with royalty-sharing." [ref=e696]
+              - row "NIL and digital-replica permissions Athlete Passport consent rails." [ref=e697]:
+                - cell "NIL and digital-replica permissions" [ref=e698]:
+                  - strong [ref=e699]: NIL and digital-replica permissions
+                - cell "Athlete Passport consent rails." [ref=e700]
+              - row "Event and race data Race partnerships, course data, weather, pacing, training-plan completion." [ref=e701]:
+                - cell "Event and race data" [ref=e702]:
+                  - strong [ref=e703]: Event and race data
+                - cell "Race partnerships, course data, weather, pacing, training-plan completion." [ref=e704]
+          - paragraph [ref=e705]:
+            - text: "The principle:"
+            - strong [ref=e706]: data access should be earned through value exchange.
+            - text: If athletes get better coaching, stronger privacy, verified opportunity, and monetization rights, they will share more. If they feel surveilled, scored, or exploited, the business fails.
+          - separator [ref=e707]
+          - 'heading "7. Governance: the non-negotiable moat" [level=2] [ref=e708]'
+          - paragraph [ref=e709]:
+            - text: Athlete Intelligence will only work if Nike is more trusted than every competitor. The board should require a formal
+            - strong [ref=e710]: Athlete Data Trust Charter
+            - text: .
+          - heading "Core commitments" [level=3] [ref=e711]
+          - table [ref=e713]:
+            - rowgroup [ref=e714]:
+              - row "Commitment Board-level rule" [ref=e715]:
+                - columnheader "Commitment" [ref=e716]
+                - columnheader "Board-level rule" [ref=e717]
+            - rowgroup [ref=e718]:
+              - row "No raw data resale Nike does not sell identifiable athlete movement, biometric, youth, or training data." [ref=e719]:
+                - cell "No raw data resale" [ref=e720]:
+                  - strong [ref=e721]: No raw data resale
+                - cell "Nike does not sell identifiable athlete movement, biometric, youth, or training data." [ref=e722]
+              - 'row "Purpose-bound consent Users approve specific uses: coaching, research, team sharing, recruiting, NIL, media, or product improvement." [ref=e723]':
+                - cell "Purpose-bound consent" [ref=e724]:
+                  - strong [ref=e725]: Purpose-bound consent
+                - 'cell "Users approve specific uses: coaching, research, team sharing, recruiting, NIL, media, or product improvement." [ref=e726]'
+              - row "Revocation by design Users can withdraw permissions; downstream uses stop where legally and technically possible." [ref=e727]:
+                - cell "Revocation by design" [ref=e728]:
+                  - strong [ref=e729]: Revocation by design
+                - cell "Users can withdraw permissions; downstream uses stop where legally and technically possible." [ref=e730]
+              - row "Data portability Athletes can export their profile and training history. Nike already provides a data-request mechanism for member-profile data." [ref=e731]:
+                - cell "Data portability" [ref=e732]:
+                  - strong [ref=e733]: Data portability
+                - cell "Athletes can export their profile and training history. Nike already provides a data-request mechanism for member-profile data." [ref=e734]
+              - row "Human-in-the-loop for high-stakes decisions AI cannot independently make medical, selection, scholarship, roster, contract, or employment decisions." [ref=e735]:
+                - cell "Human-in-the-loop for high-stakes decisions" [ref=e736]:
+                  - strong [ref=e737]: Human-in-the-loop for high-stakes decisions
+                - cell "AI cannot independently make medical, selection, scholarship, roster, contract, or employment decisions." [ref=e738]
+              - row "No youth exploitation Strong minor protections, guardian controls, limited personalization, no sensitive ad targeting." [ref=e739]:
+                - cell "No youth exploitation" [ref=e740]:
+                  - strong [ref=e741]: No youth exploitation
+                - cell "Strong minor protections, guardian controls, limited personalization, no sensitive ad targeting." [ref=e742]
+              - row "Athlete royalties If a pro or creator athlete’s motion, likeness, voice, training method, or digital replica generates revenue, the athlete shares in it." [ref=e743]:
+                - cell "Athlete royalties" [ref=e744]:
+                  - strong [ref=e745]: Athlete royalties
+                - cell "If a pro or creator athlete’s motion, likeness, voice, training method, or digital replica generates revenue, the athlete shares in it." [ref=e746]
+              - row "Model transparency Clear model cards, use limitations, confidence levels, bias testing, and audit logs." [ref=e747]:
+                - cell "Model transparency" [ref=e748]:
+                  - strong [ref=e749]: Model transparency
+                - cell "Clear model cards, use limitations, confidence levels, bias testing, and audit logs." [ref=e750]
+              - row "Medical boundary Coach+ can advise on training and recovery; it should not diagnose, prescribe, or replace clinicians unless Nike deliberately builds regulated medical products." [ref=e751]:
+                - cell "Medical boundary" [ref=e752]:
+                  - strong [ref=e753]: Medical boundary
+                - cell "Coach+ can advise on training and recovery; it should not diagnose, prescribe, or replace clinicians unless Nike deliberately builds regulated medical products." [ref=e754]
+          - paragraph [ref=e755]: The EU AI Act creates strict obligations for high-risk AI systems, including risk management, data quality, logging, documentation, deployer information, human oversight, robustness, cybersecurity, and accuracy. It also treats certain biometric, employment, education, and medical-software uses as sensitive or high-risk depending on intended purpose. Nike should design Athlete Intelligence to meet high-risk standards before regulators or athlete associations force the issue.
+          - separator [ref=e756]
+          - heading "8. Roadmap to 2030" [level=2] [ref=e757]
+          - 'heading "2026: Build the trust and data foundation" [level=3] [ref=e758]'
+          - paragraph [ref=e759]:
+            - strong [ref=e760]: "Objective:"
+            - text: unify the data layer and launch the first AI coaching beta.
+          - table [ref=e762]:
+            - rowgroup [ref=e763]:
+              - row "Workstream Actions" [ref=e764]:
+                - columnheader "Workstream" [ref=e765]
+                - columnheader "Actions" [ref=e766]
+            - rowgroup [ref=e767]:
+              - row "Data Create Athlete Data Vault across Nike App, NRC, NTC, SNKRS, membership, and partner integrations." [ref=e768]:
+                - cell "Data" [ref=e769]
+                - cell "Create Athlete Data Vault across Nike App, NRC, NTC, SNKRS, membership, and partner integrations." [ref=e770]
+              - row "AI Build the first Nike Athlete Graph and retrieval layer from Nike training, coaching, sport science, and product knowledge." [ref=e771]:
+                - cell "AI" [ref=e772]
+                - cell "Build the first Nike Athlete Graph and retrieval layer from Nike training, coaching, sport science, and product knowledge." [ref=e773]
+              - 'row "Product Launch Coach+ beta for runners: adaptive plans, conversational coaching, race prep, recovery guidance." [ref=e774]':
+                - cell "Product" [ref=e775]
+                - 'cell "Launch Coach+ beta for runners: adaptive plans, conversational coaching, race prep, recovery guidance." [ref=e776]'
+              - row "Governance Publish the Athlete Data Trust Charter. Create model-risk and athlete-rights review boards." [ref=e777]:
+                - cell "Governance" [ref=e778]
+                - cell "Publish the Athlete Data Trust Charter. Create model-risk and athlete-rights review boards." [ref=e779]
+              - row "Partnerships Deepen Apple Health, Garmin, Strava, and race partnerships." [ref=e780]:
+                - cell "Partnerships" [ref=e781]
+                - cell "Deepen Apple Health, Garmin, Strava, and race partnerships." [ref=e782]
+          - 'heading "2027: Launch Coach+ and movement intelligence" [level=3] [ref=e783]'
+          - paragraph [ref=e784]:
+            - strong [ref=e785]: "Objective:"
+            - text: monetize consumer AI coaching.
+          - table [ref=e787]:
+            - rowgroup [ref=e788]:
+              - row "Workstream Actions" [ref=e789]:
+                - columnheader "Workstream" [ref=e790]
+                - columnheader "Actions" [ref=e791]
+            - rowgroup [ref=e792]:
+              - row "Coach+ Paid launch in running, strength, and general fitness." [ref=e793]:
+                - cell "Coach+" [ref=e794]
+                - cell "Paid launch in running, strength, and general fitness." [ref=e795]
+              - row "Movement AI Add smartphone gait, squat, jump, landing, and mobility assessments." [ref=e796]:
+                - cell "Movement AI" [ref=e797]
+                - cell "Add smartphone gait, squat, jump, landing, and mobility assessments." [ref=e798]
+              - row "Events Bundle Coach+ with marathon, 10K, basketball, soccer, and youth-sport programs." [ref=e799]:
+                - cell "Events" [ref=e800]
+                - cell "Bundle Coach+ with marathon, 10K, basketball, soccer, and youth-sport programs." [ref=e801]
+              - row "Content License AI-personalized training content from Nike athletes and coaches." [ref=e802]:
+                - cell "Content" [ref=e803]
+                - cell "License AI-personalized training content from Nike athletes and coaches." [ref=e804]
+              - row "Metrics Track retention, adherence, goal completion, opt-in rates, and privacy trust scores." [ref=e805]:
+                - cell "Metrics" [ref=e806]
+                - cell "Track retention, adherence, goal completion, opt-in rates, and privacy trust scores." [ref=e807]
+          - 'heading "2028: Enter teams, academies, and athlete passports" [level=3] [ref=e808]'
+          - paragraph [ref=e809]:
+            - strong [ref=e810]: "Objective:"
+            - text: build B2B recurring revenue and athlete identity infrastructure.
+          - table [ref=e812]:
+            - rowgroup [ref=e813]:
+              - row "Workstream Actions" [ref=e814]:
+                - columnheader "Workstream" [ref=e815]
+                - columnheader "Actions" [ref=e816]
+            - rowgroup [ref=e817]:
+              - row "Performance Cloud Launch with Nike-sponsored schools, clubs, and federations." [ref=e818]:
+                - cell "Performance Cloud" [ref=e819]
+                - cell "Launch with Nike-sponsored schools, clubs, and federations." [ref=e820]
+              - row "Athlete Passport Launch verified profile, movement tests, recruiting tools, and youth privacy mode." [ref=e821]:
+                - cell "Athlete Passport" [ref=e822]
+                - cell "Launch verified profile, movement tests, recruiting tools, and youth privacy mode." [ref=e823]
+              - row "NIL Add rights management and athlete-permission workflows." [ref=e824]:
+                - cell "NIL" [ref=e825]
+                - cell "Add rights management and athlete-permission workflows." [ref=e826]
+              - row "Validation Publish prospective validation studies for movement assessments and training recommendations." [ref=e827]:
+                - cell "Validation" [ref=e828]
+                - cell "Publish prospective validation studies for movement assessments and training recommendations." [ref=e829]
+              - row "GTM Use Nike team-sales and sponsorship channels as enterprise distribution." [ref=e830]:
+                - cell "GTM" [ref=e831]
+                - cell "Use Nike team-sales and sponsorship channels as enterprise distribution." [ref=e832]
+          - 'heading "2029: Scale marketplace and licensed digital athletes" [level=3] [ref=e833]'
+          - paragraph [ref=e834]:
+            - strong [ref=e835]: "Objective:"
+            - text: add athlete-rights revenue and partner APIs.
+          - table [ref=e837]:
+            - rowgroup [ref=e838]:
+              - row "Workstream Actions" [ref=e839]:
+                - columnheader "Workstream" [ref=e840]
+                - columnheader "Actions" [ref=e841]
+            - rowgroup [ref=e842]:
+              - row "Virtual Athlete Studio Launch licensed AI training experiences with selected Nike athletes." [ref=e843]:
+                - cell "Virtual Athlete Studio" [ref=e844]
+                - cell "Launch licensed AI training experiences with selected Nike athletes." [ref=e845]
+              - row "Data licensing Create privacy-preserving APIs for events, gyms, corporate wellness, and developers." [ref=e846]:
+                - cell "Data licensing" [ref=e847]
+                - cell "Create privacy-preserving APIs for events, gyms, corporate wellness, and developers." [ref=e848]
+              - row "Team SaaS Expand beyond Nike-sponsored teams; create tiered pricing for schools and academies." [ref=e849]:
+                - cell "Team SaaS" [ref=e850]
+                - cell "Expand beyond Nike-sponsored teams; create tiered pricing for schools and academies." [ref=e851]
+              - row "International Build localized compliance for EU, China, India, Japan, and Brazil." [ref=e852]:
+                - cell "International" [ref=e853]
+                - cell "Build localized compliance for EU, China, India, Japan, and Brazil." [ref=e854]
+              - row "Trust Annual independent audit of privacy, bias, safety, and athlete royalties." [ref=e855]:
+                - cell "Trust" [ref=e856]
+                - cell "Annual independent audit of privacy, bias, safety, and athlete royalties." [ref=e857]
+          - 'heading "2030: Become the default intelligence layer for sport" [level=3] [ref=e858]'
+          - paragraph [ref=e859]:
+            - strong [ref=e860]: "Objective:"
+            - text: Athlete Intelligence is a material Nike business line.
+          - table [ref=e862]:
+            - rowgroup [ref=e863]:
+              - row "2030 target Goal" [ref=e864]:
+                - columnheader "2030 target" [ref=e865]
+                - columnheader "Goal" [ref=e866]
+            - rowgroup [ref=e867]:
+              - row "Paid Coach+ subscribers 15M+" [ref=e868]:
+                - cell "Paid Coach+ subscribers" [ref=e869]
+                - cell "15M+" [ref=e870]
+              - row "Teams / clubs / schools on Performance Cloud 50,000+" [ref=e871]:
+                - cell "Teams / clubs / schools on Performance Cloud" [ref=e872]
+                - cell "50,000+" [ref=e873]
+              - row "Athlete Passports 5M+ premium or institution-linked" [ref=e874]:
+                - cell "Athlete Passports" [ref=e875]
+                - cell "5M+ premium or institution-linked" [ref=e876]
+              - row "Annual Athlete Intelligence revenue $3.5–4.0B base case" [ref=e877]:
+                - cell "Annual Athlete Intelligence revenue" [ref=e878]
+                - cell "$3.5–4.0B base case" [ref=e879]
+              - row "Revenue mix Predominantly recurring software, SaaS, licensing, and marketplace fees" [ref=e880]:
+                - cell "Revenue mix" [ref=e881]
+                - cell "Predominantly recurring software, SaaS, licensing, and marketplace fees" [ref=e882]
+              - row "Strategic outcome Nike owns the trusted intelligence relationship with athletes, not just the product relationship" [ref=e883]:
+                - cell "Strategic outcome" [ref=e884]
+                - cell "Nike owns the trusted intelligence relationship with athletes, not just the product relationship" [ref=e885]
+          - separator [ref=e886]
+          - heading "9. Board ask" [level=2] [ref=e887]
+          - paragraph [ref=e888]: Nike’s board should approve four decisions.
+          - heading "1. Create a stand-alone Athlete Intelligence P&L" [level=3] [ref=e889]
+          - paragraph [ref=e890]: This cannot be a feature team inside Nike Digital. It needs a general manager, CTO-level authority, data-governance authority, product leaders for consumer and enterprise, and dedicated commercial accountability.
+          - heading "2. Commit $1.0–1.3B over five years" [level=3] [ref=e891]
+          - paragraph [ref=e892]: "Suggested allocation:"
+          - table [ref=e894]:
+            - rowgroup [ref=e895]:
+              - row "Category Investment" [ref=e896]:
+                - columnheader "Category" [ref=e897]
+                - columnheader "Investment" [ref=e898]
+            - rowgroup [ref=e899]:
+              - row "AI/data platform and engineering $350M" [ref=e900]:
+                - cell "AI/data platform and engineering" [ref=e901]
+                - cell "$350M" [ref=e902]
+              - 'row "Product development: Coach+, Performance Cloud, Passport $250M" [ref=e903]':
+                - 'cell "Product development: Coach+, Performance Cloud, Passport" [ref=e904]'
+                - cell "$250M" [ref=e905]
+              - row "M&A / acquihires in motion capture, sports SaaS, privacy tech $250–400M" [ref=e906]:
+                - cell "M&A / acquihires in motion capture, sports SaaS, privacy tech" [ref=e907]
+                - cell "$250–400M" [ref=e908]
+              - row "Compliance, security, trust infrastructure $100M" [ref=e909]:
+                - cell "Compliance, security, trust infrastructure" [ref=e910]
+                - cell "$100M" [ref=e911]
+              - row "GTM, athlete content, enterprise sales $150–200M" [ref=e912]:
+                - cell "GTM, athlete content, enterprise sales" [ref=e913]
+                - cell "$150–200M" [ref=e914]
+              - row "Total ~$1.0–1.3B" [ref=e915]:
+                - cell "Total" [ref=e916]:
+                  - strong [ref=e917]: Total
+                - cell "~$1.0–1.3B" [ref=e918]:
+                  - strong [ref=e919]: ~$1.0–1.3B
+          - heading "3. Approve the Athlete Data Trust Charter" [level=3] [ref=e920]
+          - paragraph [ref=e921]: The charter should be public, specific, and enforceable. It is not legal boilerplate; it is the basis of the moat.
+          - heading "4. Set a 2030 target" [level=3] [ref=e922]
+          - paragraph [ref=e923]: "Nike should set an internal target for Athlete Intelligence to reach:"
+          - list [ref=e924]:
+            - listitem [ref=e925]:
+              - strong [ref=e926]: $3.5–4.0B in annual revenue
+            - listitem [ref=e927]:
+              - strong [ref=e928]: 65–75% gross margin
+            - listitem [ref=e929]:
+              - strong [ref=e930]: 25–35% operating margin
+            - listitem [ref=e931]:
+              - strong [ref=e932]: 15M paid Coach+ subscribers
+            - listitem [ref=e933]:
+              - strong [ref=e934]: 50,000+ teams, clubs, and schools on Nike Performance Cloud
+            - listitem [ref=e935]:
+              - strong [ref=e936]: 5M+ verified Athlete Passports
+          - separator [ref=e937]
+          - heading "10. The strongest version of the board pitch" [level=2] [ref=e938]
+          - blockquote [ref=e939]:
+            - generic [ref=e940]: Nike has always known that every athlete is more than a customer. Every athlete has goals, movement patterns, habits, constraints, injuries, identity, community, and potential. Historically, we have monetized that relationship through products. By 2030, we can also monetize it through intelligence.
+            - generic [ref=e942]: "The next great Nike business is not another shoe category. It is Athlete Intelligence: the trusted AI layer that helps athletes train, recover, compete, get recruited, control their data, and license their athletic identity."
+            - generic [ref=e944]: The market is ready. Consumers already pay for fitness subscriptions. Teams already pay for performance analytics. Athletes are beginning to demand control over their data, likeness, and digital replicas. AI is making coaching, biomechanics, scouting, and media generation scalable. But the category lacks a trusted global brand that athletes believe is on their side.
+            - generic [ref=e946]: Nike can be that brand.
+            - generic [ref=e948]: We should not sell athlete data. We should sell athlete outcomes. We should not build a surveillance business. We should build a trust business. We should not chase speculative collectibles. We should create durable AI products that make athletes better and pay athl
+        - generic [ref=e949]:
+          - img [ref=e950]
+          - generic [ref=e952]:
+            - paragraph [ref=e953]: Document Truncated
+            - paragraph [ref=e954]:
+              - text: This document exceeds the display limit of 30,000 characters and has been truncated.
+              - generic [ref=e955]:
+                - text: You can view the complete text by opening the
+                - button "Source URL" [ref=e956] [cursor=pointer]
+                - text: .
+      - generic [ref=e957]:
+        - heading "Source URL" [level=2] [ref=e958]
+        - button "file:///Users/kevinturner/Library/CloudStorage/GoogleDrive-kevincollinsturner@gmail.com/My Drive/pci-inbox/NIKE Athlete Intelligence by 2030.md" [ref=e959] [cursor=pointer]

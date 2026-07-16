@@ -4,6 +4,7 @@ import os
 import shutil
 import time
 import webbrowser
+from pathlib import Path
 from typing import List, Optional
 
 import typer
@@ -41,6 +42,11 @@ from pci.rag import (
     build_search_results,
     filter_query_data_by_source_type,
     rag_settings,
+)
+from pci.rename import (
+    DEFAULT_RENAME_MODEL,
+    propose_filename,
+    rename_paths,
 )
 
 app = typer.Typer(help="Personal Content Index")
@@ -232,6 +238,9 @@ def doctor():
     table.add_row("OpenRouter API key present", str(embed["api_key_present"]))
     table.add_row("OpenRouter site URL", str(embed["site_url"] or "-"))
     table.add_row("OpenRouter site name", str(embed["site_name"] or "-"))
+    table.add_row("Rename model", os.environ.get("PCI_RENAME_MODEL", DEFAULT_RENAME_MODEL))
+    table.add_row("OpenAI API key present", "yes" if os.environ.get("OPENAI_API_KEY") else "no")
+    table.add_row("OpenAI base URL", os.environ.get("OPENAI_BASE_URL") or "-")
 
     console.print(table)
 
@@ -1284,6 +1293,111 @@ def import_folder(path: str, ext: str = typer.Option(None, help="Filter by file 
     start_time = time.time()
     asyncio.run(process_all())
     console.print(f"[bold green]Folder import complete in {time.time() - start_time:.2f} seconds![/bold green]")
+
+
+@app.command()
+def rename(
+    paths: Optional[List[Path]] = typer.Argument(
+        None,
+        help="One or more files or directories to rename. Use --dir for the directory form.",
+    ),
+    directory: Optional[Path] = typer.Option(
+        None, "--dir", help="A directory to scan (alternative to passing directory paths positionally)."
+    ),
+    recursive: bool = typer.Option(
+        False, "--recursive", "-r",
+        help="Recurse into subdirectories when scanning a directory.",
+    ),
+    all_files: bool = typer.Option(
+        False, "--all",
+        help="Process every supported file, not only those with generic-looking names.",
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Print proposed renames without touching the filesystem.",
+    ),
+    yes: bool = typer.Option(
+        False, "--yes", "-y", help="Skip the confirmation prompt before applying renames.",
+    ),
+    model: str = typer.Option(
+        DEFAULT_RENAME_MODEL, "--model",
+        help=(
+            "OpenAI model identifier. Defaults to $PCI_RENAME_MODEL or 'gpt-5-mini'. "
+            "Note: the original request referenced 'gpt-5.4-mini', which is not a real "
+            "OpenAI model identifier; this is treated as a typo for 'gpt-5-mini'. "
+            "Pass --model to override."
+        ),
+    ),
+) -> None:
+    """Smart LLM rename of files with generic / meaningless names.
+
+    Supported extensions: .md, .markdown, .txt, .pdf
+    Requires OPENAI_API_KEY (in .env or shell).
+    Default model is `gpt-5-mini` (the user-supplied `gpt-5.4-mini` is treated as
+    a typo); override with `--model` or the `PCI_RENAME_MODEL` env var.
+    """
+    targets: list[Path] = list(paths) if paths else []
+    if directory is not None:
+        targets.append(directory)
+    if not targets:
+        console.print("[red]No paths provided. Pass file/directory args or --dir.[/red]")
+        raise typer.Exit(code=1)
+
+    missing = [str(t) for t in targets if not t.exists()]
+    if len(missing) == len(targets):
+        console.print(f"[red]Path(s) not found: {', '.join(missing)}[/red]")
+        raise typer.Exit(code=1)
+    for m in missing:
+        console.print(f"[yellow]Warning: not found: {m}[/yellow]")
+
+    if not dry_run and not yes:
+        if not typer.confirm(
+            f"Apply smart rename to {len(targets)} target(s) using {model}?",
+            default=False,
+        ):
+            console.print("[yellow]Rename cancelled.[/yellow]")
+            return
+
+    summary = asyncio.run(
+        rename_paths(
+            targets,
+            model=model,
+            dry_run=dry_run,
+            only_generic=not all_files,
+            recursive=recursive,
+            propose_fn=propose_filename,
+        )
+    )
+
+    for r in summary["results"]:
+        original = r.get("original", "?")
+        reason = r.get("reason", "")
+        if r.get("renamed"):
+            new_name = Path(r["new_path"]).name
+            console.print(f"[green]renamed[/green] {original} → {new_name}")
+        elif reason == "dry-run":
+            console.print(f"[cyan]would rename[/cyan] {original} → {r.get('proposed', '?')}")
+        elif reason == "not-generic":
+            console.print(f"[dim]skipped (not generic)[/dim] {original}")
+        elif reason == "no-change":
+            console.print(f"[dim]skipped (no-change)[/dim] {original}")
+        elif reason == "unsupported-extension":
+            console.print(f"[yellow]skipped (unsupported ext)[/yellow] {original}")
+        elif reason == "not-found":
+            console.print(f"[red]not found[/red] {original}")
+        elif reason.startswith("extraction-error"):
+            console.print(f"[red]extraction error[/red] {original}: {reason}")
+        elif reason.startswith("llm-error"):
+            console.print(f"[red]LLM error[/red] {original}: {reason}")
+        elif reason.startswith("rename-error"):
+            console.print(f"[red]rename error[/red] {original}: {reason}")
+        else:
+            console.print(f"[yellow]skipped[/yellow] {original}: {reason}")
+
+    console.print(
+        f"\n[bold green]Rename complete:[/bold green] "
+        f"processed {summary['processed']}, renamed {summary['renamed']}, "
+        f"skipped {summary['skipped']}, errors {len(summary['errors'])}."
+    )
 
 
 @app.command()

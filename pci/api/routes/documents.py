@@ -1,6 +1,10 @@
 import asyncio
 import math
+import subprocess
+import webbrowser
+from pathlib import Path
 from typing import Optional
+from urllib.parse import unquote, urlparse
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -17,6 +21,29 @@ router = APIRouter(prefix="/api/documents", tags=["documents"])
 
 def _row_to_dict(row) -> dict:
     return dict(row) if row else {}
+
+
+def _open_source_url(url: str) -> bool:
+    parsed = urlparse(url)
+
+    if parsed.scheme == "file":
+        path = Path(unquote(parsed.path))
+        if not path.exists():
+            archived_path = path.parent / "archived" / path.name
+            if archived_path.exists():
+                path = archived_path
+            else:
+                matches = list(path.parent.glob(f"**/{path.name}")) if path.parent.exists() else []
+                if matches:
+                    path = matches[0]
+
+        if not path.exists():
+            return False
+
+        completed = subprocess.run(["open", str(path)], check=False)
+        return completed.returncode == 0
+
+    return webbrowser.open(url)
 
 
 @router.get("", response_model=DocumentListResponse)
@@ -73,6 +100,23 @@ async def get_document(doc_id: int):
     if not row:
         raise HTTPException(status_code=404, detail="Document not found")
     return DocumentOut.model_validate(_row_to_dict(row))
+
+
+@router.post("/{doc_id}/open")
+async def open_document_source(doc_id: int):
+    row = await asyncio.to_thread(db.get_document, doc_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    url = row["url"]
+    if not url:
+        raise HTTPException(status_code=400, detail="Document has no source URL")
+
+    opened = await asyncio.to_thread(_open_source_url, url)
+    if not opened:
+        raise HTTPException(status_code=500, detail="Could not open source URL")
+
+    return {"ok": True}
 
 
 @router.patch("/{doc_id}", response_model=DocumentOut)
